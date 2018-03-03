@@ -83,7 +83,7 @@ add_seed(Source, Seed1) :-
         interval-Interval,
         name-DName,
         organization-_{name: OName},
-        prefixes-[bnode-BNodePrefix],
+        prefixes-[_{iri: BNodePrefix, prefixLabel: bnode}],
         processed-0.0,
         url-Url
       ],

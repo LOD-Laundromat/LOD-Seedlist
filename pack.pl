@@ -7,5 +7,5 @@ keywords([
   'Semantic Web'
 ]).
 name('LOD-Seedlist').
-title('LOD Seedlist: A list of location on the Internet where Linked Open Data is published.').
+title('LOD Seedlist: A list of locations on the Internet where Linked Open Data is published.').
 version('0.0.0').

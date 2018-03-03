@@ -1,0 +1,5 @@
+#+TITLE: LOD-Seedlist
+#+AUTHOR: Wouter Beek
+
+A list of location on the Internet where Linked Open Data is
+published.  These locations are scraped by the [[https://github.com/LOD-Laundromat/LOD-Laundromat][LOD Laundromat]].

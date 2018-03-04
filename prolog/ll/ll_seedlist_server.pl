@@ -16,6 +16,7 @@
 :- use_module(library(http/http_resource)).
 :- use_module(library(http/http_server)).
 :- use_module(library(pagination)).
+:- use_module(library(rocks_ext)).
 
 :- use_module(library(ll/ll_seedlist)).
 
@@ -52,13 +53,16 @@ home_method(Request, Method, MediaTypes) :-
   memberchk(request_uri(RelUri), Request),
   http_absolute_uri(RelUri, Uri),
   Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
-  pagination(Seed, seed_(Stale, Seed), Options, Page),
+  pagination(Seed, seed_(Stale, Seed), number_of_seeds_, Options, Page),
   rest_media_type(MediaTypes, home_media_type(Page)).
 
 seed_(false, Seed) :- !,
   seed(Seed).
 seed_(true, Seed) :-
   stale_seed(Seed).
+
+number_of_seeds_(N) :-
+  rocks_size(seedlist, N).
 
 % /: GET,HEAD: application/json
 home_media_type(Page, media(application/json,_)) :-

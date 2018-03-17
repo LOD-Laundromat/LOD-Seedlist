@@ -16,6 +16,7 @@
 :- use_module(library(http/http_resource)).
 :- use_module(library(http/http_server)).
 :- use_module(library(pagination)).
+:- use_module(library(pp)).
 :- use_module(library(rocks_ext)).
 
 :- use_module(library(ll/ll_seedlist)).
@@ -28,13 +29,18 @@
 http:media_types(home_handler, [media(application/json,[]),
                                 media(text/html,[])]).
 
+http:param(hash, [
+  atom,
+  description("Optional hash indicating a specific seed."),
+  optional(true)
+]).
 http:param(stale, [
   boolean,
   default(false),
   description("Return only stale seeds.")
 ]).
 
-http:params(home_handler, [page,page_size,stale]).
+http:params(home_handler, [hash,page,page_size,stale]).
 
 :- http_handler(/, home_handler, [methods([get,head,options])]).
 
@@ -48,13 +54,17 @@ home_method(Request, Method, MediaTypes) :-
   http_is_get(Method),
   rest_parameters(
     Request,
-    [page(PageNumber),page_size(PageSize),stale(Stale)]
+    [hash(Hash),page(PageNumber),page_size(PageSize),stale(Stale)]
   ),
-  memberchk(request_uri(RelUri), Request),
-  http_absolute_uri(RelUri, Uri),
-  Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
-  pagination(Seed, seed_(Stale, Seed), number_of_seeds_, Options, Page),
-  rest_media_type(MediaTypes, home_media_type(Page)).
+  (   var(Hash)
+  ->  memberchk(request_uri(RelUri), Request),
+      http_absolute_uri(RelUri, Uri),
+      Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
+      pagination(Seed, seed_(Stale, Seed), number_of_seeds_, Options, Page),
+      rest_media_type(MediaTypes, home_media_type(Page))
+  ;   rocks(seedlist, Hash, Seed),
+      rest_media_type(MediaTypes, seed_media_type(Seed))
+  ).
 
 seed_(false, Seed) :- !,
   seed(Seed).
@@ -80,10 +90,20 @@ html_seed_table(Seeds) -->
 
 html_seed_row(Seed) -->
   {
-    _{name: DName, organization: Org, url: Url} :< Seed,
-    _{name: OName} :< Org
-  },
-  html(li(a(href=Url, [OName,"/",DName]))).
+    Hash{name: DName, organization: Org, url: Url} :< Seed,
+    Hash{name: OName} :< Org,
+    http_link_to_id(home_handler, [hash(Hash)], Uri)
+  }, !,
+  html(li(a(href=Uri, [OName,"/",DName," ",\external_link(Url)]))).
+html_seed_row(Seed) -->
+  {Hash{} :< Seed},
+  html(li(code(Hash))).
+
+seed_media_type(Seed, media(text/html,_)) :-
+  Hash{} :< Seed,
+  atom_string(Hash, Subtitle),
+  with_output_to(string(Pre), print_term(Seed)),
+  html_page(page(_,[Subtitle],_), [], [pre(Pre)]).
 
 
 

@@ -106,12 +106,13 @@ ckan_package_resource(Package, Resource, MediaTypes) :-
 
 ckan_rdf_package(Source, Package) :-
   ckan_package(Source, Package),
-  % The dataset contains at least one RDF document.
-  once((
-    ckan_package_resource(Package, _, MediaTypes),
-    member(MediaType, MediaTypes),
-    rdf_media_type_(MediaType)
-  )).
+  (   % The dataset contains at least one RDF document.
+      ckan_package_resource(Package, _, MediaTypes),
+      member(MediaType, MediaTypes),
+      rdf_media_type_(MediaType)
+  ->  format("✓")
+  ;   format("❌")
+  ).
 
 
 
@@ -193,6 +194,7 @@ format_(classifide).
 format_(creole).
 format_('conll-u').
 format_(cvs).
+format_(dat).
 format_(data).
 format_('data file in asc').
 format_('data file in csv').
@@ -203,7 +205,12 @@ format_('data file in sol').
 format_('data file in spss').
 format_('data file in stata').
 format_('data file in tifgis').
+% Common file extension of dBase database files.
+% ShapeFile-related
+format_(dbf).
+format_(dia).
 format_('doc:04').
+format_(document).
 format_('esri arc export').
 format_('esri grid').
 format_('esri rest').
@@ -224,18 +231,20 @@ format_('gtfs-realtime').
 format_('gzip:text/sql').
 format_(hydra).
 format_(hyperlink).
+format_(image).
 format_(img).
 format_(index).
 format_(iso).
 format_(labpal).
 format_(link).
 format_('linked data').
+format_(log).
 format_(mabxml).
 format_(map).
 format_('marc21').
 format_(mol).
-format_('ms acess mdb').
 format_('ms excel csv').
+format_(multiformat).
 format_('nc:55').
 format_(netcdf).
 format_(none).
@@ -247,16 +256,23 @@ format_(pbf).
 format_(php).
 format_('plain text').
 format_('png jpg').
+% ShapeFile-related
+format_(prj).
 format_(qgis).
 format_(rdf).
 format_('rdf endpoint').
 format_(scraper).
 format_(sdf).
 format_(search).
+format_(service).
 format_(shape).
+format_(shapefile).
 format_(shapefiles).
+% ShapeFile-related
 format_(shp).
+% ShapeFile-related
 format_(shx).
+format_(sid).
 format_('sisis export format').
 format_(solr).
 format_(sparql).
@@ -265,6 +281,7 @@ format_(spreadsheet).
 format_(sql).
 format_(sqlite).
 format_(sru).
+format_(text).
 % Translation Memory eXchange (TMX) is an XML specification for the
 % exchange of translation memory data between computer-aided
 % translation and localization tools with little or no loss of
@@ -276,21 +293,25 @@ format_(txt).
 format_(url).
 format_(void).
 format_(wcs).
+format_(webapp).
 format_(wfs).
 format_(wms).
 format_(wsdl).
 format_(xlb).
 format_('xml, json, rdf').
 format_(xsd).
+format_(yaml).
 format_(yml).
 
 format_media_type_(Format, MediaType) :-
   media_type_extension(MediaType, Format).
+format_media_type_('7z',                        media(application/'x-7z-compressed',[])).
 format_media_type_('atom feed',                 media(application/'atom+x',[])).
 format_media_type_(biopax,                      media(application/'vnd.biopax.rdf+xml',[])).
 format_media_type_('bz2:nt',                    media(application/'n-triples',[])).
 format_media_type_('bz2:xml',                   media(application/xml,[])).
 format_media_type_('data file in excel',        media(application/'vnd.ms-excel',[])).
+format_media_type_(excel,                       media(application/'vnd.ms-excel',[])).
 format_media_type_(geojsom,                     media(application/'vnd.geo+json',[])).
 format_media_type_(georss,                      media(application/'rss+xml',[])).
 format_media_type_(geotiff,                     media(image/tiff,[])).
@@ -316,8 +337,10 @@ format_media_type_('rdf-turtle',                media(text/turtle,[])).
 format_media_type_('rdf-xml',                   media(application/'rdf+xml',[])).
 format_media_type_(rdfa,                        media(application/'xhtml+xml',[])).
 format_media_type_(rdfxml,                      media(application/'rdf+xml',[])).
+format_media_type_('rss + xml',                 media(application/'rss+xml',[])).
 format_media_type_('sparql-json',               media(application/'sparql-results+json',[])).
 format_media_type_('tar.gz',                    media(application/'x-tar',[])).
+% Probably a type of `tiff'.
 format_media_type_(tif,                         media(image/tiff,[])).
 format_media_type_('trig gzip',                 media(application/trig,[])).
 format_media_type_('ttl.bz2',                   media(text/turtle,[])).
@@ -330,9 +353,13 @@ format_media_type_('sparql-xml',                media(application/'sparql-result
 format_media_type_(tab,                         media(text/'tab-separated-values',[])).
 format_media_type_(tar,                         media(application/'x-tar',[])).
 format_media_type_(tgz,                         media(application/'x-tar',[])).
+% @tbd Generalize: `xxx.gz' has the Media Type of `xxx'.
 format_media_type_('tsv.gz',                    media(text/'tab-separated-values',[])).
 format_media_type_(turtle,                      media(text/turtle,[])).
+% Probably a typo of `xlsx'
+format_media_type_(xlxs,                        media(application/'vnd.openxmlformats-officedocument.spreadsheetml.sheet',[])).
 format_media_type_(xsl,                         media(application/'vnd.ms-excel',[])).
+% Probably a typo of `xlsx'
 format_media_type_(xslx,                        media(application/'vnd.openxmlformats-officedocument.spreadsheetml.sheet',[])).
 
 media_type_(media(api/'linked-data',_)).
@@ -342,6 +369,13 @@ media_type_(media(api/search,_)).
 media_type_(media(api/sparql,_)).
 media_type_(media(application/'octet-stream',_)).
 media_type_(media(application/'sql+gzip',_)).
+media_type_(media(application/'vnd.lotus-1-2-3',_)).
+media_type_(media(application/'vnd.lotus-approach',_)).
+media_type_(media(application/'vnd.lotus-freelance',_)).
+media_type_(media(application/'vnd.lotus-notes',_)).
+media_type_(media(application/'vnd.lotus-organizer',_)).
+media_type_(media(application/'vnd.lotus-screencam',_)).
+media_type_(media(application/'vnd.lotus-wordpro',_)).
 media_type_(media(application/'x-zip-compressed',_)).
 media_type_(media(application/'zip+vnd.ms-excel',_)).
 media_type_(media(application/download,_)).
@@ -368,9 +402,11 @@ media_type_media_type_(media(application/csv,L),               media(text/csv,L)
 media_type_media_type_(media(application/msexcel,L),           media(application/'vnd.ms-excel',L)).
 media_type_media_type_(media(application/rar,L),               media(application/'vnd.rar',L)).
 media_type_media_type_(media(application/'rdf xml',L),         media(application/'rdf+xml',L)).
+media_type_media_type_(media(application/'vnd.openxmlformates-officedocument.spreadsheetml.sheet',L), media(application/'vnd.openxmlformats-officedocument.spreadsheetml.sheet',L)).
 media_type_media_type_(media(application/'x-bzip',L),          media(application/'x-bzip2',L)).
 media_type_media_type_(media(application/'x-bzip2',L),         media(application/'x-bzip2',L)).
 media_type_media_type_(media(application/'x-gzip',L),          media(application/gzip,L)).
+media_type_media_type_(media(application/'x-netcdf',L),        media(application/netcdf,L)).
 media_type_media_type_(media(application/'x-nquads',L),        media(application/'n-quads',L)).
 media_type_media_type_(media(application/'x-ntriples',L),      media(application/'n-triples',L)).
 media_type_media_type_(media(application/'x-pdf',L),           media(application/pdf,L)).

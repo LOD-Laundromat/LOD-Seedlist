@@ -76,7 +76,7 @@ add_seed(Source, Seed1) :-
       maplist(triply_name, [OName0,DName0], [OName,DName]),
       % prefixes
       atomic_list_concat([OName,DName], /, Name),
-      rdf_bnode_iri(Name, BNodePrefix),
+      rdf_bnode_prefix(Name, BNodePrefix),
       L1 = [
         added-Now,
         documents-Urls,
@@ -100,7 +100,7 @@ seed_license(Seed, T, L) :-
   (   triply_license(License0, License)
   ->  L = [license-License|T]
   ;   print_message(warning, unrecognized_license(License0)),
-      L = []
+      L = T
   ).
 seed_license(_, T, T).
 
@@ -140,17 +140,27 @@ stale_seed(Seed) :-
 % HELPERS %
 
 %! triply_license(?Url:atom, ?Label:string) is nondet.
+%
+% http://portal.opendata.dk/dataset/open-data-dk-licens
+% http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
+% https://creativecommons.org/licenses/by/3.0/at/deed.de
 
-triply_license('http://www.opendefinition.org/licenses/cc-zero', "CC0").
 triply_license('http://creativecommons.org/licenses/by-nc/2.0/', "CC-BY-NC").
+triply_license('http://creativecommons.org/licenses/by-nc/3.0/nz', "CC-BY-NC").
+triply_license('http://creativecommons.org/licenses/by/4.0/', "CC-BY").
+triply_license('http://creativecommons.org/publicdomain/zero/1.0', "CC0").
+triply_license('http://creativecommons.org/publicdomain/zero/1.0/', "CC0").
 triply_license('http://reference.data.gov.uk/id/open-government-licence', "OGL").
 triply_license('http://www.opendefinition.org/licenses/cc-by', "CC-BY").
 triply_license('http://www.opendefinition.org/licenses/cc-by-sa', "CC-BY-SA").
+triply_license('http://www.opendefinition.org/licenses/cc-zero', "CC0").
 triply_license('http://www.opendefinition.org/licenses/cc-zero', "CC0").
 triply_license('http://www.opendefinition.org/licenses/gfdl', "GFDL").
 triply_license('http://www.opendefinition.org/licenses/odc-by', "ODC-BY").
 triply_license('http://www.opendefinition.org/licenses/odc-odbl', "ODC-ODBL").
 triply_license('http://www.opendefinition.org/licenses/odc-pddl', "ODC-PDDL").
+triply_license('https://creativecommons.org/licenses/by/4.0/', "CC-BY").
+triply_license('https://creativecommons.org/publicdomain/zero/1.0', "CC0").
 
 
 

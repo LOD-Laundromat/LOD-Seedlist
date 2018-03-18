@@ -40,8 +40,8 @@ ckan_add_seed(Source, Package) :-
   ckan_description(Package, L1, L2),
   % license
   ckan_license(Package, L2, L3),
-  dict_pairs(Seed, Uri, L3),
-  add_seed(Source, Seed).
+  dict_pairs(Seed, Uri, [source-Source|L3]),
+  add_seed(Seed).
 
 ckan_description(Package, T, [description-Desc|T]) :-
   _{notes: Desc0} :< Package,

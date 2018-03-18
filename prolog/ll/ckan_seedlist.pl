@@ -114,7 +114,8 @@ ckan_rdf_package(Source, Package) :-
       member(MediaType, MediaTypes),
       rdf_media_type_(MediaType)
   ->  format("✓")
-  ;   format("❌")
+  ;   format("❌"),
+      fail
   ).
 
 

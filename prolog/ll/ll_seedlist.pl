@@ -1,7 +1,7 @@
 :- module(
   ll_seedlist,
   [
-    add_seed/2,       % +Source, +Seed
+    add_seed/1,       % +Seed
     clear_seedlist/0,
     seed/1,           % -Seed
     stale_seed/1      % -Seed
@@ -45,7 +45,7 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 
 
 
-%! add_seed(+Source:atom, +Seed:dict) is det.
+%! add_seed(+Seed:dict) is det.
 %
 % Seed contains the following key/value pairs:
 %
@@ -59,8 +59,13 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 %     * image(atom)
 %   * url(atom)
 
-add_seed(Source, Seed1) :-
-  Url{documents: Urls, name: DName0, organization: Org} :< Seed1,
+add_seed(Seed1) :-
+  Url{
+    documents: Urls,
+    name: DName0,
+    organization: Org,
+    source: Source
+  } :< Seed1,
   get_time(Now),
   % interval
   (   catch(http_metadata_last_modified(Url, LMod), _, fail)

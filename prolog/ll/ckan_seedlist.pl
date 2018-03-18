@@ -160,7 +160,7 @@ clean_media_type(Format1, MediaType) :-
           format_media_type_(Format4, MediaType)
       ->  true
       ;   % known unknown format
-          format_(Format4)
+          format_format_(Format4, _)
       ->  fail
       ;   % unknown unknown format
           print_message(warning, unknown_format(Format4)),
@@ -168,71 +168,53 @@ clean_media_type(Format1, MediaType) :-
       )
   ).
 
-format_(Format) :-
-  sub_atom(Format, _, _, 0, '.e00').
-format_(Format) :-
-  sub_atom(Format, _, _, 0, '.mid').
-format_(Format) :-
-  sub_atom(Format, _, _, 0, '.owl').
-format_(Format) :-
-  sub_atom(Format, _, _, 0, '.rdf').
-format_(Format) :-
-  sub_atom(Format, _, _, 0, '.shp').
-format_(Format) :-
-  sub_atom(Format, _, _, 0, '.topojson').
-format_(Format) :-
-  sub_atom(Format, _, _, 0, '.txt').
+% Application Programming Interface (API).
 format_(api).
-format_('apping.owl').
+% ESRI ArcGIS
 format_(arcgis).
+% ASCII
 format_(ascii).
+% ASP.NET
 format_(asp).
+% ASP.NET
 format_(aspx).
 format_(bin).
+% AutoCAD
+format_(autocad).
+% Biological Pathway Exchange (BioPAX) [RDF/OWL-based]
 format_(biopax).
-format_(classifide).
 format_(creole).
-format_('conll-u').
-format_(cvs).
 format_(dat).
-format_(data).
-format_('data file in asc').
-format_('data file in csv').
-format_('data file in csv, excel').
-format_('data file in excel and rdf').
-format_('data file in shp and csv').
-format_('data file in sol').
-format_('data file in spss').
-format_('data file in stata').
-format_('data file in tifgis').
 % Common file extension of dBase database files.
 % ShapeFile-related
 format_(dbf).
 format_(dia).
-format_('doc:04').
 format_(document).
-format_('esri arc export').
-format_('esri grid').
-format_('esri rest').
-format_('esri shape file').
-format_('esri shape files').
-format_('esri shape').
-format_(gdocs).
-format_(geopackage).
+% Document Type Definition
+format_(dtd).
+format_(emme).
+% executable
+format_(exe).
+% ESRI File Geodatabase (FileGDB)
+format_(fgdb).
+% TerraGo GeoPDF
 format_(geopdf).
 format_(getdata).
+% Geographic Infromation System (GIS)
 format_(gis).
+% Git
 format_(git).
+% Google Doc
 format_('google doc').
-format_('google spreadsheet').
-format_(googlespreadsheet).
+% Google Sheet
+format_('google sheet').
+% OGC GeoPackage (GPKG)
+format_(gpkg).
+% General Transit Feed Specification (GTFS)
 format_(gtfs).
-format_('gtfs-realtime').
-format_('gzip:text/sql').
 format_(hydra).
 format_(hyperlink).
 format_(image).
-format_(img).
 format_(index).
 format_(iso).
 format_(labpal).
@@ -241,45 +223,59 @@ format_('linked data').
 format_(log).
 format_(mabxml).
 format_(map).
+% MBTiles: file format for storing map tiles in a single file;
+% technically, an SQLite database.
+format_(mbtiles).
+% MARC 21: redefinition of MARC for the 21st century
 format_('marc21').
-format_(mol).
-format_('ms excel csv').
-format_(multiformat).
-format_('nc:55').
-format_(netcdf).
 format_(none).
+% ODATA
+format_(odata).
+% Open Streetmap (OSM)
 format_(osm).
 format_(other).
+% Web Ontology Language (OWL)
 format_(owl).
-format_('owl, ontology, meta/owl').
+% Protocolbuffer Binary Format (PBF)
 format_(pbf).
+% PHP
 format_(php).
-format_('plain text').
-format_('png jpg').
-% ShapeFile-related
+% ESRI ShapeFile-related
 format_(prj).
+% pixel image
+format_(px).
+% QGIS
 format_(qgis).
+% Resource Description Framework (RDF)
 format_(rdf).
-format_('rdf endpoint').
+% SPSS save file
+format_(sav).
 format_(scraper).
 format_(sdf).
 format_(search).
 format_(service).
-format_(shape).
-format_(shapefile).
-format_(shapefiles).
-% ShapeFile-related
+% ESRI ShapeFile
 format_(shp).
-% ShapeFile-related
+% ESRI ShapeFile-related
 format_(shx).
 format_(sid).
 format_('sisis export format').
+% Solr search engine?
 format_(solr).
+% This could be either the query string format, or one of the result
+% set formats.
 format_(sparql).
-format_('sparql-query').
+% (document type)
 format_(spreadsheet).
+% SPSS Statistics
+format_(spss).
+% Structured Query Language (SQL)
 format_(sql).
+% SQLite
 format_(sqlite).
+% Search/Retrieve via URL (SRU): a standard search protocol for
+% Internet search queries, utilizing Contextual Query Language (CQL),
+% a standard query syntax for representing queries.
 format_(sru).
 format_(text).
 % Translation Memory eXchange (TMX) is an XML specification for the
@@ -288,20 +284,46 @@ format_(text).
 % critical data.
 format_(tmx).
 format_(tomtom).
+% TopoJSON: extension of GeoJSON
 format_(topojson).
-format_(txt).
+% Universal Resource Locator (URL)
 format_(url).
 format_(void).
+% Web Coverage Service (WCS)
 format_(wcs).
 format_(webapp).
+% Web Feature Service (WFS)
 format_(wfs).
+% Web Map Service (WMS)
 format_(wms).
+% Web Services Description Language (WSDL)
 format_(wsdl).
+% Microsoft Excel Toolbars file
 format_(xlb).
-format_('xml, json, rdf').
+% XML Schema Definition (XSD)
 format_(xsd).
-format_(yaml).
-format_(yml).
+
+format_format_(data, dat).
+format_format_('esri shape', shapefile).
+format_format_('esri shape file', shapefile).
+format_format_('esri shape files', shapefile).
+format_format_(gdocs, 'google doc').
+format_format_(geopackage, gpkg).
+format_format_('google spreadsheet', 'google sheet').
+format_format_(googlespreadsheet, 'google sheet').
+format_format_(img, image).
+format_format_(multiformat, multipart).
+format_format_('ogc:wfs', wfs).
+format_format_('ogc:wms', wms).
+% PASW (Predictive Analytics SoftWare)
+format_format_(pasw, spss).
+format_format_('plain text', text).
+format_format_(shape, shp).
+format_format_(shapefile, shp).
+format_format_(sqlitedb, sqlite).
+format_format_(txt, text).
+format_format_(Format, Format) :-
+  format_(Format).
 
 format_media_type_(Format, MediaType) :-
   media_type_extension(MediaType, Format).
@@ -310,8 +332,11 @@ format_media_type_('atom feed',                 media(application/'atom+x',[])).
 format_media_type_(biopax,                      media(application/'vnd.biopax.rdf+xml',[])).
 format_media_type_('bz2:nt',                    media(application/'n-triples',[])).
 format_media_type_('bz2:xml',                   media(application/xml,[])).
+format_media_type_(cvs,                         media(text/csv,[])).
 format_media_type_('data file in excel',        media(application/'vnd.ms-excel',[])).
 format_media_type_(excel,                       media(application/'vnd.ms-excel',[])).
+% JSON-stat
+format_media_type_('json-stat',                 media(application/json,[])).
 format_media_type_(geojsom,                     media(application/'vnd.geo+json',[])).
 format_media_type_(georss,                      media(application/'rss+xml',[])).
 format_media_type_(geotiff,                     media(image/tiff,[])).
@@ -320,15 +345,19 @@ format_media_type_('gzip::nquads',              media(application/'n-quads',[]))
 format_media_type_('gzip:ntriples',             media(application/'n-triples',[])).
 format_media_type_('html+rdfa',                 media(application/'xhtml+xml',[])).
 format_media_type_(html5,                       media(text/html,[])).
+% International Aid Transparency Initiative (IATI) XML
+format_media_type_('iati-xml',                  media(text/xml,[])).
 format_media_type_(jpg,                         media(image/jpeg,[])).
 format_media_type_('json-ld',                   media(application/'ld+json',[])).
 format_media_type_('microsoft access',          media(application/'vnd.ms-access',[])).
 format_media_type_('microsoft access database', media(application/'vnd.ms-access',[])).
 format_media_type_('microsoft excel',           media(application/'vnd.ms-excel',[])).
+format_media_type_(mol,                         media(chemical/'x-mdl-molfile',[])).
 format_media_type_('ms access',                 media(application/'vnd.ms-access',[])).
 format_media_type_('ms access mdb',             media(application/'vnd.ms-access',[])).
 format_media_type_('n-quads',                   media(application/'n-quads',[])).
 format_media_type_('n-triples',                 media(application/'n-triples',[])).
+format_media_type_(netcdf,                      media(application/netcdf,[])).
 format_media_type_('ods format',                media(application/'vnd.oasis.opendocument.spreadsheet',[])).
 format_media_type_('rdf trig',                  media(application/trig,[])).
 format_media_type_('rdf+xml',                   media(application/'rdf+xml',[])).
@@ -338,9 +367,10 @@ format_media_type_('rdf-xml',                   media(application/'rdf+xml',[]))
 format_media_type_(rdfa,                        media(application/'xhtml+xml',[])).
 format_media_type_(rdfxml,                      media(application/'rdf+xml',[])).
 format_media_type_('rss + xml',                 media(application/'rss+xml',[])).
+format_media_type_('sparql-query',              media(application/'sparql-query',[])).
 format_media_type_('sparql-json',               media(application/'sparql-results+json',[])).
 format_media_type_('tar.gz',                    media(application/'x-tar',[])).
-% Probably a type of `tiff'.
+% typo of `tiff'.
 format_media_type_(tif,                         media(image/tiff,[])).
 format_media_type_('trig gzip',                 media(application/trig,[])).
 format_media_type_('ttl.bz2',                   media(text/turtle,[])).
@@ -356,11 +386,12 @@ format_media_type_(tgz,                         media(application/'x-tar',[])).
 % @tbd Generalize: `xxx.gz' has the Media Type of `xxx'.
 format_media_type_('tsv.gz',                    media(text/'tab-separated-values',[])).
 format_media_type_(turtle,                      media(text/turtle,[])).
-% Probably a typo of `xlsx'
+% typo of `xlsx'
 format_media_type_(xlxs,                        media(application/'vnd.openxmlformats-officedocument.spreadsheetml.sheet',[])).
 format_media_type_(xsl,                         media(application/'vnd.ms-excel',[])).
-% Probably a typo of `xlsx'
+% typo of `xlsx'
 format_media_type_(xslx,                        media(application/'vnd.openxmlformats-officedocument.spreadsheetml.sheet',[])).
+format_media_type_(yaml,                        media(application/'x-yaml',[])).
 
 media_type_(media(api/'linked-data',_)).
 media_type_(media(api/dcat,_)).
@@ -399,6 +430,7 @@ media_type_(media(text/plain,_)).
 media_type_media_type_(media(Super/Sub,_), media(Super/Sub,Params)) :-
   media_type(media(Super/Sub,Params)).
 media_type_media_type_(media(application/csv,L),               media(text/csv,L)).
+media_type_media_type_(media(application/'gpx-xml',L),         media(application/'gpx+xml',L)).
 media_type_media_type_(media(application/msexcel,L),           media(application/'vnd.ms-excel',L)).
 media_type_media_type_(media(application/rar,L),               media(application/'vnd.rar',L)).
 media_type_media_type_(media(application/'rdf xml',L),         media(application/'rdf+xml',L)).

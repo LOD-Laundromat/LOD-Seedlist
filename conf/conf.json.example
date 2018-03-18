@@ -1,5 +1,6 @@
 {
   "rocks": {
-    "directory": "/home/wbeek/data/ll/rocks"
+    "directory": "/home/wbeek/data/ll/rocks",
+    "nofiles": 10000
   }
 }

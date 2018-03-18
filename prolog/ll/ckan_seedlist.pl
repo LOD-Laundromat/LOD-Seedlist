@@ -194,6 +194,10 @@ format_(dat).
 % Common file extension of dBase database files.
 % ShapeFile-related [ESRI]
 format_(dbf).
+% DGN (design) is the name used for CAD file formats supported by
+% Bentley Systems, MicroStation and Intergraph's Interactive Graphics
+% Design System (IGDS) CAD programs.
+format_(dgn).
 format_(dia).
 format_(document).
 % Document Type Definition (DTD)
@@ -242,7 +246,6 @@ format_('marc21').
 % MBTiles: file format for storing map tiles in a single file;
 % technically, an SQLite database.
 format_(mbtiles).
-format_(mysql).
 format_(none).
 % ODATA
 format_(odata).
@@ -404,6 +407,7 @@ format_media_type_(rdfxml,                      media(application/'rdf+xml',[]))
 format_media_type_('rss + xml',                 media(application/'rss+xml',[])).
 format_media_type_('sparql-query',              media(application/'sparql-query',[])).
 format_media_type_('sparql-json',               media(application/'sparql-results+json',[])).
+format_media_type_('tab-separated-values',      media(text/'tab-separated-values',[])).
 format_media_type_('tar.gz',                    media(application/'x-tar',[])).
 % typo of `tiff'.
 format_media_type_(tif,                         media(image/tiff,[])).

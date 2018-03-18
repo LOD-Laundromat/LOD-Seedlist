@@ -4,6 +4,8 @@
 A list of locations on the Internet where Linked Open Data is
 published.  These locations are scraped by the [[https://github.com/LOD-Laundromat/LOD-Laundromat][LOD Laundromat]].
 
+* BUGS
+** Connection refused http://open-data.europa.eu/data
 * API
 
 | *Path* | *Method*  | *Query*           | *Media Type*       |

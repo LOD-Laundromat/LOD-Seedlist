@@ -75,8 +75,7 @@ add_seed(Source, Seed1) :-
       % Normalize for Triply names.
       maplist(triply_name, [OName0,DName0], [OName,DName]),
       % prefixes
-      atomic_list_concat([OName,DName], /, Name),
-      rdf_bnode_prefix(Name, BNodePrefix),
+      bnode_prefix_([OName,DName], BNodePrefix),
       L1 = [
         added-Now,
         documents-Urls,
@@ -94,6 +93,11 @@ add_seed(Source, Seed1) :-
       print_message(informational, Msg),
       rocks_put(seedlist, Hash, Seed2)
   ).
+
+bnode_prefix_(Segments, BNodePrefix) :-
+  setting(bnode_prefix_scheme, Scheme),
+  setting(bnode_prefix_authority, Auth),
+  uri_comps(BNodePrefix, uri(Scheme,Auth,['.well-known',genid|Segments],_,_)).
 
 seed_license(Seed, T, L) :-
   _{license: License0} :< Seed,
@@ -151,7 +155,11 @@ triply_license(Url, Label) :-
 
 % non-mapped
 license_('').
+license_('http://data.surrey.ca/pages/open-government-licence-surrey').
+license_('http://www.data.gouv.fr/license-Ouverte-Open-license').
+license_('http://www.nationalarchives.gov.uk/doc/non-commercial-government-licence/').
 license_('http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/').
+license_('https://www.agesic.gub.uy/innovaportal/file/6327/1/licencia-de-datos-abiertos.pdf').
 
 % mapped
 license_('http://creativecommons.org/licenses/by-nc/', "CC-BY-NC").

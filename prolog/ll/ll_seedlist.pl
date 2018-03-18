@@ -149,21 +149,27 @@ triply_license(Url, Label) :-
   license_(Prefix, Label),
   atom_prefix(Url, Prefix), !.
 
+% non-mapped
+license_('').
+license_('http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/').
+
+% mapped
 license_('http://creativecommons.org/licenses/by-nc/', "CC-BY-NC").
 license_('http://creativecommons.org/licenses/by-sa/', "CC-BY-SA").
 license_('http://creativecommons.org/licenses/by/', "CC-BY").
 license_('http://creativecommons.org/publicdomain/zero/1.0', "CC0").
 license_('http://reference.data.gov.uk/id/open-government-licence', "OGL").
-license_('http://www.opendefinition.org/licenses/cc-by-sa', "CC-BY-SA").
 license_('http://www.opendefinition.org/licenses/cc-by', "CC-BY").
+license_('http://www.opendefinition.org/licenses/cc-by-sa', "CC-BY-SA").
 license_('http://www.opendefinition.org/licenses/cc-zero', "CC0").
 license_('http://www.opendefinition.org/licenses/gfdl', "GFDL").
 license_('http://www.opendefinition.org/licenses/odc-by', "ODC-BY").
 license_('http://www.opendefinition.org/licenses/odc-odbl', "ODC-ODBL").
 license_('http://www.opendefinition.org/licenses/odc-pddl', "ODC-PDDL").
+license_('https://creativecommons.org/licenses/by-sa/3.0/', "CC-BY-SA").
 license_('https://creativecommons.org/licenses/by/', "CC-BY").
 license_('https://creativecommons.org/publicdomain/zero/1.0', "CC0").
-license_('http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/', "other").
+
 
 
 %! triply_name(+Name:atom, -TriplyName:atom) is det.

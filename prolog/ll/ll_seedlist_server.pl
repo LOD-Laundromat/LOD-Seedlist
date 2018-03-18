@@ -7,6 +7,7 @@
 */
 
 :- use_module(library(http/http_dispatch)).
+:- use_module(library(http/http_json)).
 :- use_module(library(http/http_path)).
 :- use_module(library(settings)).
 
@@ -99,10 +100,15 @@ html_seed_row(Seed) -->
   {Hash{} :< Seed},
   html(li(code(Hash))).
 
+% /$(HASH): GET, HEAD: application/json
+seed_media_type(Seed, media(application/json,_)) :-
+  reply_json_dict(Seed).
+% /$(HASH): GET, HEAD: text/html
 seed_media_type(Seed, media(text/html,_)) :-
   Hash{} :< Seed,
   atom_string(Hash, Subtitle),
-  with_output_to(string(Pre), print_term(Seed)),
+ %with_output_to(string(Pre), print_term(Seed)),
+  format(string(Pre), "~w", [Seed]),
   html_page(page(_,[Subtitle],_), [], [pre(Pre)]).
 
 

@@ -15,9 +15,11 @@
 :- use_module(library(apply)).
 :- use_module(library(http/json)).
 :- use_module(library(lists)).
+:- use_module(library(yall)).
 
 :- use_module(library(atom_ext)).
 :- use_module(library(dcg)).
+:- use_module(library(file_ext)).
 :- use_module(library(http/ckan_api), []).
 :- use_module(library(media_type)).
 
@@ -69,16 +71,17 @@ ckan_resource_url(Resource, Url) :-
 
 %! ckan_package(+Source:atom, -Package:dict) is multi.
 
+% DEBUG: read from file
 ckan_package(File, Package) :-
   exists_file(File), !,
-  setup_call_cleanup(
-    gzopen(File, read, In),
-    (
+  call_stream_file(
+    File,
+    {Package}/[In]>>(
       json_read_dict(In, Packages, [value_string_as(atom)]),
       member(Package, Packages)
-    ),
-    close(In)
+    )
   ).
+% read from API
 ckan_package(Site, Package) :-
   ckan_api:ckan_package(Site, Package).
 
@@ -168,18 +171,18 @@ clean_media_type(Format1, MediaType) :-
       )
   ).
 
-% Microsoft Access ACCDB
+% Access ACCDB [Microsoft]
 format_(accdb).
 format_(adf).
 % Application Programming Interface (API).
 format_(api).
-% ESRI ArcGIS
+% ArcGIS [ESRI]
 format_(arcgis).
 % ASCII
 format_(ascii).
-% ASP.NET
+% ASP.NET [Microsoft]
 format_(asp).
-% ASP.NET
+% ASP.NET [Microsoft]
 format_(aspx).
 format_(bin).
 % AutoCAD
@@ -189,18 +192,18 @@ format_(biopax).
 format_(creole).
 format_(dat).
 % Common file extension of dBase database files.
-% ShapeFile-related
+% ShapeFile-related [ESRI]
 format_(dbf).
 format_(dia).
 format_(document).
-% Document Type Definition
+% Document Type Definition (DTD)
 format_(dtd).
-% ESRI ArcInfo interchange file (E00)
+% ArcInfo interchange file (E00) [ESRI]
 format_(e00).
 format_(emme).
 % executable
 format_(exe).
-% ESRI File Geodatabase (FileGDB)
+% File Geodatabase (FileGDB) [ESRI]
 format_(fgdb).
 format_(file).
 % File Transfer Protocol (FTP)
@@ -213,11 +216,11 @@ format_(getdata).
 format_(gis).
 % Git
 format_(git).
-% Google Doc
+% Google Doc [Google]
 format_('google doc').
-% Google Sheet
+% Google Sheet [Google]
 format_('google sheet').
-% OGC GeoPackage (GPKG)
+% GeoPackage (GPKG) [OGC]
 format_(gpkg).
 % General Transit Feed Specification (GTFS)
 format_(gtfs).
@@ -243,18 +246,18 @@ format_(mysql).
 format_(none).
 % ODATA
 format_(odata).
-% Open Geospatial Consortium (OGC)
+% Open Geospatial Consortium [OGC]
 format_(ogc).
 % Open Streetmap (OSM)
 format_(osm).
 format_(other).
-% Web Ontology Language (OWL)
+% Web Ontology Language (OWL) [W3C]
 format_(owl).
 % Protocolbuffer Binary Format (PBF)
 format_(pbf).
 % PHP
 format_(php).
-% ESRI ShapeFile-related
+% ShapeFile-related [ESRI]
 format_(prj).
 % pixel image
 format_(px).
@@ -262,10 +265,12 @@ format_(px).
 format_(py).
 % QGIS
 format_(qgis).
+% ArcGIS-related [ESRI]
+format_(qlr).
 format_(qual).
 % R
 format_(r).
-% Resource Description Framework (RDF)
+% Resource Description Framework (RDF) [W3C]
 format_(rdf).
 % SPSS save file
 format_(sav).
@@ -273,9 +278,9 @@ format_(scraper).
 format_(sdf).
 format_(search).
 format_(service).
-% ESRI ShapeFile
+% ShapeFile [ESRI]
 format_(shp).
-% ESRI ShapeFile-related
+% ShapeFile-related [ESRI]
 format_(shx).
 format_(sid).
 format_('sisis export format').
@@ -305,6 +310,8 @@ format_(tmx).
 format_(tomtom).
 % TopoJSON: extension of GeoJSON
 format_(topojson).
+% [ESRI]
+format_(twf).
 % Universal Resource Locator (URL)
 format_(url).
 format_(void).
@@ -318,16 +325,19 @@ format_(webgis).
 format_(wfs).
 % Web Map Service (WMS)
 format_(wms).
+% Web Map Tile Service (WMTS) [OGC]
+format_(wmts).
 % Web Services Description Language (WSDL)
 format_(wsdl).
 % World Wide Web (WWW)
 format_(www).
-% Microsoft Excel Toolbars file
+% Excel toolbars file [Microsoft]
 format_(xlb).
-% XML Schema Definition (XSD)
+% XML Schema Definition (XSD) [W3C]
 format_(xsd).
 
 format_format_(data, dat).
+format_format_(dbase, dbf).
 format_format_('esri shape', shapefile).
 format_format_('esri shape file', shapefile).
 format_format_('esri shape files', shapefile).
@@ -434,6 +444,8 @@ media_type_(media(application/'vnd.lotus-screencam',_)).
 media_type_(media(application/'vnd.lotus-wordpro',_)).
 % Hierarchical Data Format (HDF)
 media_type_(media(application/'x-hdf',_)).
+% TROFF
+media_type_(media(application/'x-troff-man',_)).
 media_type_(media(application/'x-zip-compressed',_)).
 media_type_(media(application/'zip+vnd.ms-excel',_)).
 media_type_(media(application/download,_)).

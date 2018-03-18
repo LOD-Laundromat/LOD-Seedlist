@@ -124,7 +124,11 @@ ckan_rdf_package(Source, Package) :-
 
 ckan_scrape_init(Source) :-
   forall(
-    ckan_rdf_package(Source, Package),
+    catch(
+      ckan_rdf_package(Source, Package),
+      E,
+      (print_message(warning, E), fail)
+    ),
     ckan_add_seed(Source, Package)
   ).
 

@@ -76,7 +76,10 @@ add_seed(Seed1) :-
   (   % The URL has already been added to the seedlist.
       rocks_key(seedlist, Hash)
   ->  print_message(informational, existing_seed(Url,Hash))
-  ;   (Org == null -> OName0 = Source ; _{name: OName0} :< Org),
+  ;   (   _{organization: Org} :< Seed1
+      ->  _{name: OName0} :< Org
+      ;   OName0 = Source
+      ),
       % Normalize for Triply names.
       maplist(triply_name, [OName0,DName0], [OName,DName]),
       % prefixes

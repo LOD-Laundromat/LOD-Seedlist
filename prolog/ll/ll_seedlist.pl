@@ -100,8 +100,8 @@ add_seed(Seed1) :-
   ).
 
 bnode_prefix_(Segments, BNodePrefix) :-
-  setting(bnode_prefix_scheme, Scheme),
-  setting(bnode_prefix_authority, Auth),
+  setting(rdf_term:bnode_prefix_scheme, Scheme),
+  setting(rdf_term:bnode_prefix_authority, Auth),
   uri_comps(BNodePrefix, uri(Scheme,Auth,['.well-known',genid|Segments],_,_)).
 
 seed_license(Seed, T, L) :-

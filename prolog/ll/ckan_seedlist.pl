@@ -243,6 +243,8 @@ format_(mabxml).
 format_(map).
 % MARC 21: redefinition of MARC for the 21st century
 format_('marc21').
+% MARCXML
+format_(marcxml).
 % MBTiles: file format for storing map tiles in a single file;
 % technically, an SQLite database.
 format_(mbtiles).

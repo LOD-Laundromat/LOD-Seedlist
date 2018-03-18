@@ -168,6 +168,9 @@ clean_media_type(Format1, MediaType) :-
       )
   ).
 
+% Microsoft Access ACCDB
+format_(accdb).
+format_(adf).
 % Application Programming Interface (API).
 format_(api).
 % ESRI ArcGIS
@@ -192,11 +195,17 @@ format_(dia).
 format_(document).
 % Document Type Definition
 format_(dtd).
+% ESRI ArcInfo interchange file (E00)
+format_(e00).
 format_(emme).
 % executable
 format_(exe).
 % ESRI File Geodatabase (FileGDB)
 format_(fgdb).
+format_(file).
+% File Transfer Protocol (FTP)
+format_(ftp).
+format_(gdb).
 % TerraGo GeoPDF
 format_(geopdf).
 format_(getdata).
@@ -212,6 +221,8 @@ format_('google sheet').
 format_(gpkg).
 % General Transit Feed Specification (GTFS)
 format_(gtfs).
+% Shuttle Radar Topography Mission Height (SRTM) height (HGT) file
+format_(hgt).
 format_(hydra).
 format_(hyperlink).
 format_(image).
@@ -223,14 +234,17 @@ format_('linked data').
 format_(log).
 format_(mabxml).
 format_(map).
+% MARC 21: redefinition of MARC for the 21st century
+format_('marc21').
 % MBTiles: file format for storing map tiles in a single file;
 % technically, an SQLite database.
 format_(mbtiles).
-% MARC 21: redefinition of MARC for the 21st century
-format_('marc21').
+format_(mysql).
 format_(none).
 % ODATA
 format_(odata).
+% Open Geospatial Consortium (OGC)
+format_(ogc).
 % Open Streetmap (OSM)
 format_(osm).
 format_(other).
@@ -244,8 +258,13 @@ format_(php).
 format_(prj).
 % pixel image
 format_(px).
+% Python
+format_(py).
 % QGIS
 format_(qgis).
+format_(qual).
+% R
+format_(r).
 % Resource Description Framework (RDF)
 format_(rdf).
 % SPSS save file
@@ -292,12 +311,17 @@ format_(void).
 % Web Coverage Service (WCS)
 format_(wcs).
 format_(webapp).
+% Web Application Resource (WAR)
+format_(war).
+format_(webgis).
 % Web Feature Service (WFS)
 format_(wfs).
 % Web Map Service (WMS)
 format_(wms).
 % Web Services Description Language (WSDL)
 format_(wsdl).
+% World Wide Web (WWW)
+format_(www).
 % Microsoft Excel Toolbars file
 format_(xlb).
 % XML Schema Definition (XSD)
@@ -320,6 +344,7 @@ format_format_(pasw, spss).
 format_format_('plain text', text).
 format_format_(shape, shp).
 format_format_(shapefile, shp).
+format_format_('sql server', sql).
 format_format_(sqlitedb, sqlite).
 format_format_(txt, text).
 format_format_(Format, Format) :-
@@ -407,6 +432,8 @@ media_type_(media(application/'vnd.lotus-notes',_)).
 media_type_(media(application/'vnd.lotus-organizer',_)).
 media_type_(media(application/'vnd.lotus-screencam',_)).
 media_type_(media(application/'vnd.lotus-wordpro',_)).
+% Hierarchical Data Format (HDF)
+media_type_(media(application/'x-hdf',_)).
 media_type_(media(application/'x-zip-compressed',_)).
 media_type_(media(application/'zip+vnd.ms-excel',_)).
 media_type_(media(application/download,_)).
@@ -426,6 +453,7 @@ media_type_(media(multipart/'form-data',_)).
 media_type_(media(rdf/'xml, html, json',_)).
 media_type_(media(rdf/void,_)).
 media_type_(media(text/plain,_)).
+media_type_(media(video/'x-msvideo',_)).
 
 media_type_media_type_(media(Super/Sub,_), media(Super/Sub,Params)) :-
   media_type(media(Super/Sub,Params)).

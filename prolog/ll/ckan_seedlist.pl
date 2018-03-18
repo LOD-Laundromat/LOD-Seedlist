@@ -362,6 +362,7 @@ format_format_(pasw, spss).
 format_format_('plain text', text).
 format_format_(shape, shp).
 format_format_(shapefile, shp).
+format_format_(shapefiles, shp).
 format_format_('sql server', sql).
 format_format_(sqlitedb, sqlite).
 format_format_(txt, text).
@@ -370,6 +371,7 @@ format_format_(Format, Format) :-
 
 format_media_type_(Format, MediaType) :-
   media_type_extension(MediaType, Format).
+% Map typo's onto Media Types.
 format_media_type_('7z',                        media(application/'x-7z-compressed',[])).
 format_media_type_('atom feed',                 media(application/'atom+x',[])).
 format_media_type_(biopax,                      media(application/'vnd.biopax.rdf+xml',[])).
@@ -380,12 +382,14 @@ format_media_type_('data file in excel',        media(application/'vnd.ms-excel'
 format_media_type_(excel,                       media(application/'vnd.ms-excel',[])).
 % JSON-stat
 format_media_type_('json-stat',                 media(application/json,[])).
+format_media_type_('geo.json',                  media(application/'vnd.geo+json',[])).
 format_media_type_(geojsom,                     media(application/'vnd.geo+json',[])).
 format_media_type_(georss,                      media(application/'rss+xml',[])).
 format_media_type_(geotiff,                     media(image/tiff,[])).
 format_media_type_(gzip,                        media(application/gzip,[])).
 format_media_type_('gzip::nquads',              media(application/'n-quads',[])).
 format_media_type_('gzip:ntriples',             media(application/'n-triples',[])).
+format_media_type_(htm,                         media(text/html,[])).
 format_media_type_('html+rdfa',                 media(application/'xhtml+xml',[])).
 format_media_type_(html5,                       media(text/html,[])).
 % International Aid Transparency Initiative (IATI) XML
@@ -409,12 +413,12 @@ format_media_type_('rdf-turtle',                media(text/turtle,[])).
 format_media_type_('rdf-xml',                   media(application/'rdf+xml',[])).
 format_media_type_(rdfa,                        media(application/'xhtml+xml',[])).
 format_media_type_(rdfxml,                      media(application/'rdf+xml',[])).
-format_media_type_('rss + xml',                 media(application/'rss+xml',[])).
+format_media_type_('rss + xml',                   media(application/'rss+xml',[])).
+format_media_type_('rss+xml',                   media(application/'rss+xml',[])).
 format_media_type_('sparql-query',              media(application/'sparql-query',[])).
 format_media_type_('sparql-json',               media(application/'sparql-results+json',[])).
 format_media_type_('tab-separated-values',      media(text/'tab-separated-values',[])).
 format_media_type_('tar.gz',                    media(application/'x-tar',[])).
-% typo of `tiff'.
 format_media_type_(tif,                         media(image/tiff,[])).
 format_media_type_('trig gzip',                 media(application/trig,[])).
 format_media_type_('ttl.bz2',                   media(text/turtle,[])).
@@ -430,10 +434,8 @@ format_media_type_(tgz,                         media(application/'x-tar',[])).
 % @tbd Generalize: `xxx.gz' has the Media Type of `xxx'.
 format_media_type_('tsv.gz',                    media(text/'tab-separated-values',[])).
 format_media_type_(turtle,                      media(text/turtle,[])).
-% typo of `xlsx'
 format_media_type_(xlxs,                        media(application/'vnd.openxmlformats-officedocument.spreadsheetml.sheet',[])).
 format_media_type_(xsl,                         media(application/'vnd.ms-excel',[])).
-% typo of `xlsx'
 format_media_type_(xslx,                        media(application/'vnd.openxmlformats-officedocument.spreadsheetml.sheet',[])).
 format_media_type_(yaml,                        media(application/'x-yaml',[])).
 

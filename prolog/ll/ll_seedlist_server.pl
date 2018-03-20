@@ -43,19 +43,47 @@ http:param(stale, [
 
 http:params(home_handler, [hash,page,page_size,stale]).
 
-:- http_handler(/, home_handler, [methods([get,head,options,post])]).
+:- http_handler(/, home_handler, [id(home),
+                                  methods([get,head,options])]).
+:- http_handler(root(seed), seed_handler, [id(seed),
+                                           methods([get,head,options,post])]).
 
 :- set_setting(http:products, ["LOD-Seedlist"-"v0.0.0"]).
 
 
 
+
+
 % /
 home_handler(Request) :-
-  rest_method(Request, home_method(Request)).
-
+  rest_method(Request, home_method).
 
 % /: GET,HEAD
-home_method(Request, Method, MediaTypes) :-
+home_method(Method, MediaTypes) :-
+  http_is_get(Method),
+  rest_media_type(MediaTypes, home_get_media_type).
+
+% /: GET,HEAD: text/html
+home_get_media_type(media(text/html,_)) :-
+  http_link_to_id(seed, [], Url),
+  html_page(
+    page(_,["Home"]),
+    [],
+    [
+      p(a(href=Url, "Seedlist"))
+    ]
+  ).
+
+
+
+
+
+% /seed
+seed_handler(Request) :-
+  rest_method(Request, seed_method(Request)).
+
+% /seed: GET,HEAD
+seed_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
   rest_parameters(
     Request,
@@ -66,14 +94,15 @@ home_method(Request, Method, MediaTypes) :-
       http_absolute_uri(RelUri, Uri),
       Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
       pagination(Seed, seed_(Stale, Seed), number_of_seeds_, Options, Page),
-      rest_media_type(MediaTypes, home_media_type(Page))
+      rest_media_type(MediaTypes, seeds_get_media_type(Page))
   ;   rocks(seedlist, Hash, Seed),
-      rest_media_type(MediaTypes, seed_media_type(Seed))
+      rest_media_type(MediaTypes, seed_get_media_type(Seed))
   ).
-% /: POST
-home_method(Request, post, MediaTypes) :-
-  http_read_json(Request, Seed, [value_string_as(atom)]),
-  rest_media_type(MediaTypes, assert_seed_media_type(Seed)).
+% /seed: POST
+seed_method(Request, post, MediaTypes) :-
+  gtrace,
+  http_read_json_dict(Request, Seed, [value_string_as(atom)]),
+  rest_media_type(MediaTypes, seed_post_media_type(Seed)).
 
 seed_(false, Seed) :- !,
   seed(Seed).
@@ -83,17 +112,40 @@ seed_(true, Seed) :-
 number_of_seeds_(N) :-
   rocks_size(seedlist, N).
 
-
-% /: GET,HEAD: application/json
-home_media_type(Page, media(application/json,_)) :-
+% /seed: GET,HEAD: application/json
+seed_get_media_type(Page, media(application/json,_)) :-
   http_pagination_json(Page).
-% /: GET,HEAD: text/html
-home_media_type(Page, media(text/html,_)) :-
+% /seed/$(HASH): GET, HEAD: application/json
+seed_get_media_type(Seed, media(application/json,_)) :-
+  reply_json_dict(Seed).
+% /seed/$(HASH): GET, HEAD: text/html
+seed_get_media_type(Seed, media(text/html,_)) :-
+  Hash{} :< Seed,
+  atom_string(Hash, Subtitle),
+  html_page(page(_,[Subtitle],_), [], [\html_seed(Seed)]).
+
+% /seed: POST: application/json
+seed_post_media_type(Seed, media(application/json,_)) :-
+  catch(add_seed(Seed), E, true),
+  (   var(E)
+  ->  reply_json_dict(_{}, [status(201)])
+  ;   gtrace,
+      writeln(E)
+  ).
+
+% /seed: GET,HEAD: text/html
+seeds_get_media_type(Page, media(text/html,_)) :-
   html_page(
-    page(Page,[]),
+    page(Page,["Seed"]),
     [],
     [\html_pagination_result(Page, html_seed_table)]
   ).
+
+
+
+
+
+% HTML %
 
 html_seed_table(Seeds) -->
   html(ul(\html_maplist(html_seed_row, Seeds))).
@@ -108,16 +160,6 @@ html_seed_row(Seed) -->
 html_seed_row(Seed) -->
   {Hash{} :< Seed},
   html(li(code(Hash))).
-
-
-% /$(HASH): GET, HEAD: application/json
-seed_media_type(Seed, media(application/json,_)) :-
-  reply_json_dict(Seed).
-% /$(HASH): GET, HEAD: text/html
-seed_media_type(Seed, media(text/html,_)) :-
-  Hash{} :< Seed,
-  atom_string(Hash, Subtitle),
-  html_page(page(_,[Subtitle],_), [], [\html_seed(Seed)]).
 
 html_seed(Seed) -->
   {
@@ -149,20 +191,10 @@ html_seed_document(Doc) -->
   html(li(a(href=Doc, Doc))).
 
 
-% /: POST: application/json
-assert_seed_media_type(Seed, media(application/json,_)) :-
-  catch(add_seed(Seed), E, true),
-  (   var(E)
-  ->  reply_json_dict(_{}, [status(201)])
-  ;   gtrace,
-      writeln(E)
-  ).
 
 
 
-
-
-% HTML STYLE %
+% HTML style %
 
 html:rest_exception(Dict) :-
   html_page(

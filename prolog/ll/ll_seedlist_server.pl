@@ -10,6 +10,7 @@
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_path)).
 :- use_module(library(settings)).
+:- use_module(library(yall)).
 
 :- use_module(library(html/html_ext)).
 :- use_module(library(html/html_pagination)).
@@ -43,10 +44,12 @@ http:param(stale, [
 
 http:params(home_handler, [hash,page,page_size,stale]).
 
-:- http_handler(/, home_handler, [id(home),
-                                  methods([get,head,options])]).
-:- http_handler(root(seed), seed_handler, [id(seed),
-                                           methods([get,head,options,post])]).
+:- http_handler(/,
+                home_handler,
+                [id(home),methods([get,head,options])]).
+:- http_handler(root(seed),
+                seed_handler,
+                [id(seed),methods([get,head,options,patch,post])]).
 
 :- set_setting(http:products, ["LOD-Seedlist"-"v0.0.0"]).
 
@@ -83,7 +86,7 @@ seed_handler(Request) :-
   rest_method(Request, seed_method(Request)).
 
 % /seed: GET,HEAD
-seed_method(Request, Method, MediaTypes) :-
+seed_method(Request, Method, MediaTypes) :-gtrace,
   http_is_get(Method), !,
   rest_parameters(
     Request,
@@ -93,24 +96,25 @@ seed_method(Request, Method, MediaTypes) :-
   ->  memberchk(request_uri(RelUri), Request),
       http_absolute_uri(RelUri, Uri),
       Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
-      pagination(Seed, seed_(Stale, Seed), number_of_seeds_, Options, Page),
+      pagination(
+        Seed,
+        seed(Stale, Seed),
+        [N]>>rocks_size(seedlist, N),
+        Options,
+        Page
+      ),
       rest_media_type(MediaTypes, seeds_get_media_type(Page))
   ;   rocks(seedlist, Hash, Seed),
       rest_media_type(MediaTypes, seed_get_media_type(Seed))
   ).
+% /seed: PATCH
+seed_method(_, patch, MediaTypes) :-
+  next_seed(Seed),
+  rest_media_type(MediaTypes, seed_patch_media_type(Seed)).
 % /seed: POST
 seed_method(Request, post, MediaTypes) :-
-  gtrace,
   http_read_json_dict(Request, Seed, [value_string_as(atom)]),
   rest_media_type(MediaTypes, seed_post_media_type(Seed)).
-
-seed_(false, Seed) :- !,
-  seed(Seed).
-seed_(true, Seed) :-
-  stale_seed(Seed).
-
-number_of_seeds_(N) :-
-  rocks_size(seedlist, N).
 
 % /seed: GET,HEAD: application/json
 seed_get_media_type(Page, media(application/json,_)) :-
@@ -124,6 +128,10 @@ seed_get_media_type(Seed, media(text/html,_)) :-
   atom_string(Hash, Subtitle),
   html_page(page(_,[Subtitle],_), [], [\html_seed(Seed)]).
 
+% /seed: PATCH: application/json
+seed_patch_media_type(Seed, media(application/json,_)) :-
+  reply_json_dict(Seed, []).
+
 % /seed: POST: application/json
 seed_post_media_type(Seed, media(application/json,_)) :-
   catch(add_seed(Seed), E, true),
@@ -133,6 +141,9 @@ seed_post_media_type(Seed, media(application/json,_)) :-
       writeln(E)
   ).
 
+% /seed: GET,HEAD: application/json
+seeds_get_media_type(Page, media(application/json,_)) :-
+  http_pagination_json(Page).
 % /seed: GET,HEAD: text/html
 seeds_get_media_type(Page, media(text/html,_)) :-
   html_page(
@@ -140,7 +151,7 @@ seeds_get_media_type(Page, media(text/html,_)) :-
     [],
     [\html_pagination_result(Page, html_seed_table)]
   ).
-
+  
 
 
 

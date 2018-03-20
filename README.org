@@ -4,14 +4,18 @@
 A list of locations on the Internet where Linked Open Data is
 published.  These locations are scraped by the [[https://github.com/LOD-Laundromat/LOD-Laundromat][LOD Laundromat]].
 
-* BUGS
-** Connection refused http://open-data.europa.eu/data
 * API
 
-| *Path* | *Method*  | *Query*           | *Media Type*       |
-|--------+-----------+-------------------+--------------------|
-| ~/~    | ~GET~     | page(nonneg)      | ~application/json~ |
-|        |           | page_size(nonneg) | ~text/html~        |
-|        |           | stale(boolean)    |                    |
-|        | ~HEAD~    |                   |                    |
-|        | ~OPTIONS~ |                   |                    |
+| *Path*       | *Method* | *Query*           | *Media Type*       | *Description* |
+|--------------+----------+-------------------+--------------------+---------------|
+| ~/~          | ~GET~    |                   | ~text/html~        | Home page     |
+| ~/seed~      | ~GET~    | page(nonneg)      | ~application/json~ | List seeds    |
+|              |          | page_size(nonneg) | ~text/html~        |               |
+|              |          | stale(boolean)    |                    |               |
+|              | ~PATCH~  |                   | ~application/json~ | Process seed  |
+|              | ~POST~   |                   | ~application/json~ | Add seed      |
+| ~/seed/HASH~ | ~GET~    |                   | ~application/json~ | View seed     |
+|              |          |                   | ~text/html~        |               |
+
+* BUGS
+** Connection refused http://open-data.europa.eu/data

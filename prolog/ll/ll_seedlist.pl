@@ -3,8 +3,8 @@
   [
     add_seed/1,       % +Seed
     clear_seedlist/0,
-    seed/1,           % -Seed
-    stale_seed/1      % -Seed
+    next_seed/1,      % -Seed
+    seed/2            % +Stale, -Seed
   ]
 ).
 
@@ -122,27 +122,36 @@ clear_seedlist :-
 
 
 
-%! seed(-Seed:dict) is nondet.
-
-seed(Seed) :-
-  rocks_value(seedlist, Seed).
-
-
-
-%! stale_seed(-Seed:dict) is det.
+%! next_seed(-Seed:dict) is det.
 %
 % Gives the next stale seed for processing.
 
-stale_seed(Seed) :-
-  get_time(Now),
+next_seed(Seed) :-
   with_mutex(seedlist, (
-    rocks_value(seedlist, Seed),
-    Hash{interval: Interval, processed: Processed} :< Seed,
-    Processed + Interval < Now,
+    stale_seed_(Now, Hash, Seed),
     rocks_merge(seedlist, Hash, Hash{processed: Now})
   )).
 
 
+
+%! seed(+Stale:boolean, -Seed:dict) is nondet.
+
+seed(false, Seed) :- !,
+  rocks_value(seedlist, Seed).
+seed(true, Seed) :-
+  with_mutex(seedlist, stale_seed_(_, _, Seed)).
+
+
+
+% GENERICS %
+
+%! stale_seed_(-Now:float, -Hash:atom, -Seed:dict) is nondet.
+
+stale_seed_(Now, Hash, Seed) :-
+  get_time(Now),
+  rocks_value(seedlist, Seed),
+  Hash{interval: Interval, processed: Processed} :< Seed,
+  Processed + Interval < Now.
 
 
 

@@ -12,6 +12,7 @@
 :- use_module(library(settings)).
 :- use_module(library(yall)).
 
+:- use_module(library(html/html_doc)).
 :- use_module(library(html/html_ext)).
 :- use_module(library(html/html_pagination)).
 :- use_module(library(http/http_pagination)).
@@ -51,6 +52,31 @@ http:params(home_handler, [hash,page,page_size,stale]).
                 seed_handler,
                 [id(seed),methods([get,head,options,patch,post])]).
 
+:- multifile
+    html:handler_description/2,
+    html:menu_item/3,
+    http:media_types/2,
+    http:param/2,
+    http:params/2,
+    user:body//2,
+    user:head//2.
+
+html:handler_description(seed_handler, "Seed").
+
+html:menu_item(seed_handler, "Seed").
+
+http:media_types(home_handler, [media(text/html)]).
+http:media_types(seed_handler, [media(application/json),media(text/html)]).
+
+http:param(hash, [description("Hash key of a specific seed."),
+                  atom,
+                  optional(true)]).
+http:param(stale, [default(true),
+                   description("Whether the retrieved seeds should be stale or not.  Default value is ‘false’."),
+                   boolean]).
+
+http:params(seed_handler, [hash,page,page_size,stale]).
+
 :- set_setting(http:products, ["LOD-Seedlist"-"v0.0.0"]).
 
 
@@ -68,14 +94,7 @@ home_method(Method, MediaTypes) :-
 
 % /: GET,HEAD: text/html
 home_get_media_type(media(text/html,_)) :-
-  http_link_to_id(seed, [], Url),
-  html_page(
-    page(_,["Home"]),
-    [],
-    [
-      p(a(href=Url, "Seedlist"))
-    ]
-  ).
+  html_page(page(_,["Home"]), [], []).
 
 
 
@@ -86,7 +105,7 @@ seed_handler(Request) :-
   rest_method(Request, seed_method(Request)).
 
 % /seed: GET,HEAD
-seed_method(Request, Method, MediaTypes) :-gtrace,
+seed_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
   rest_parameters(
     Request,
@@ -126,7 +145,7 @@ seed_get_media_type(Seed, media(application/json,_)) :-
 seed_get_media_type(Seed, media(text/html,_)) :-
   Hash{} :< Seed,
   atom_string(Hash, Subtitle),
-  html_page(page(_,[Subtitle],_), [], [\html_seed(Seed)]).
+  html_page(page(_,[Subtitle]), [], [\html_seed(Seed)]).
 
 % /seed: PATCH: application/json
 seed_patch_media_type(Seed, media(application/json,_)) :-
@@ -163,9 +182,10 @@ html_seed_table(Seeds) -->
 
 html_seed_row(Seed) -->
   {
-    Hash{name: DName, organization: Org, url: Url} :< Seed,
-    Hash{name: OName} :< Org,
-    http_link_to_id(home_handler, [hash(Hash)], Uri)
+    Hash{dataset: Dataset, organization: Org} :< Seed,
+    _{name: DName, url: Url} :< Dataset,
+    _{name: OName} :< Org,
+    http_link_to_id(seed, [hash(Hash)], Uri)
   }, !,
   html(li(a(href=Uri, [OName,"/",DName," ",\external_link(Url)]))).
 html_seed_row(Seed) -->
@@ -174,16 +194,8 @@ html_seed_row(Seed) -->
 
 html_seed(Seed) -->
   {
-    Hash{
-      added: _Added,
-      documents: Docs,
-      interval: _Interval,
-      name: Name,
-      organization: Org,
-      prefixes: _Prefixes,
-      processed: _Processed,
-      url: Url
-    } :< Seed,
+    Hash{dataset: Dataset, documents: Docs, organization: Org} :< Seed,
+    _{name: Name, url: Url} :< Dataset,
     _{name: OrgName} :< Org
   },
   html([

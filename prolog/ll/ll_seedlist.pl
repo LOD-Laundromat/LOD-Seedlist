@@ -89,7 +89,7 @@ add_seed(Seed0) :-
       },
       % license
       seed_license(Seed0, Dataset1, Dataset2),
-      Seed = _{
+      Seed = Hash{
         dataset: Dataset2,
         documents: Urls,
         organization: _{name: OName},
@@ -118,7 +118,10 @@ seed_license(_, Dict, Dict).
 %! clear_seedlist is det.
 
 clear_seedlist :-
-  rocks_clear(seedlist).
+  forall(
+    rocks_key(seedlist, Key),
+    rocks_delete(seedlist, Key)
+  ).
 
 
 

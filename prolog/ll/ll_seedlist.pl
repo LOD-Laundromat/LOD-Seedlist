@@ -3,8 +3,8 @@
   [
     add_seed/1,       % +Seed
     clear_seedlist/0,
-    next_seed/1,      % -Seed
-    seed/2            % +Stale, -Seed
+    delete_seed/1,    % +Hash
+    next_seed/1       % -Seed
   ]
 ).
 
@@ -73,7 +73,7 @@ add_seed(Seed0) :-
   uri_hash(Url, Hash),
   (   % The URL has already been added to the seedlist.
       rocks_key(seedlist, Hash)
-  ->  print_message(informational, existing_seed(Url,Hash))
+  ->  existence_error(seed, Hash)
   ;   (   _{organization: Org} :< Seed0
       ->  _{name: OName0} :< Org
       ;   uri_host(Url, OName0)
@@ -89,9 +89,10 @@ add_seed(Seed0) :-
       },
       % license
       seed_license(Seed0, Dataset1, Dataset2),
-      Seed = Hash{
+      Seed = _{
         dataset: Dataset2,
         documents: Urls,
+        hash: Hash,
         organization: _{name: OName},
         scrape: _{added: Now, interval: Interval, processed: 0.0}
       },
@@ -125,6 +126,13 @@ clear_seedlist :-
 
 
 
+%! delete_seed(+Hash:atom) is det.
+
+delete_seed(Hash) :-
+  rocks_delete(seedlist, Hash).
+
+
+
 %! next_seed(-Seed:dict) is det.
 %
 % Gives the next stale seed for processing.
@@ -132,17 +140,8 @@ clear_seedlist :-
 next_seed(Seed) :-
   with_mutex(seedlist, (
     stale_seed_(Now, Hash, Seed),
-    rocks_merge(seedlist, Hash, Hash{processed: Now})
+    rocks_merge(seedlist, Hash, _{processed: Now})
   )).
-
-
-
-%! seed(+Stale:boolean, -Seed:dict) is nondet.
-
-seed(false, Seed) :- !,
-  rocks_value(seedlist, Seed).
-seed(true, Seed) :-
-  with_mutex(seedlist, stale_seed_(_, _, Seed)).
 
 
 
@@ -153,7 +152,8 @@ seed(true, Seed) :-
 stale_seed_(Now, Hash, Seed) :-
   get_time(Now),
   rocks_value(seedlist, Seed),
-  Hash{interval: Interval, processed: Processed} :< Seed,
+  _{hash: Hash, scrape: Scrape} :< Seed,
+  _{interval: Interval, processed: Processed} :< Scrape,
   Processed + Interval < Now.
 
 

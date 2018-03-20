@@ -185,6 +185,16 @@ license_('https://creativecommons.org/publicdomain/zero/1.0', "CC0").
 
 
 
+%! uri_host(+Uri:atom, -Host:atom) is det.
+
+uri_host(Uri, Host) :-
+  uri_components(Uri, UriComps),
+  uri_data(authority, UriComps, Auth),
+  uri_authority_components(Auth, AuthComps),
+  uri_authority_data(host, AuthComps, Host).
+
+
+
 %! triply_name(+Name:atom, -TriplyName:atom) is det.
 %
 % Triply names can only contain alpha-numeric characters and hyphens.

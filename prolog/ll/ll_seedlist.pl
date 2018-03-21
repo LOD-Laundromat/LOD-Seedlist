@@ -74,10 +74,7 @@ add_seed(Seed0) :-
   (   % The URL has already been added to the seedlist.
       rocks_key(seedlist, Hash)
   ->  existence_error(seed, Hash)
-  ;   (   _{organization: Org} :< Seed0
-      ->  _{name: OName0} :< Org
-      ;   uri_host(Url, OName0)
-      ),
+  ;   organization_name(Url, Seed0, OName0),
       % Normalize for Triply names.
       maplist(triply_name, [OName0,DName0], [OName,DName]),
       % prefixes
@@ -99,6 +96,16 @@ add_seed(Seed0) :-
       debug(ll, "Added seed: ~a/~a", [OName0,DName0]),
       rocks_put(seedlist, Hash, Seed)
   ).
+
+organization_name(_, Seed0, OName0) :-
+  _{organization: Org} :< Seed0,
+  (   _{name: OName0} :< Org
+  ->  true
+  ;   _{url: Url} :< Org
+  ->  uri_host(Url, OName0)
+  ), !.
+organization_name(Url, _, OName0) :-
+  uri_host(Url, OName0).
 
 bnode_prefix_(Segments, BNodePrefix) :-
   setting(rdf_term:bnode_prefix_scheme, Scheme),

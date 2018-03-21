@@ -122,9 +122,22 @@ seed_method(Request, Method, MediaTypes) :-
       rest_media_type(MediaTypes, seed_get_media_type(Seed))
   ).
 % /seed: PATCH
-seed_method(_, patch, MediaTypes) :-
-  next_seed(Seed),
-  rest_media_type(MediaTypes, seed_patch_media_type(Seed)).
+seed_method(Request, patch, _) :-
+  rest_parameters(
+    Request,
+    [
+      hash(Hash, [atom,
+                  description("Hash key of the patched seed, if any."),
+                  optional(true)])
+    ]
+  ),
+  (   var(Hash),
+      (   next_seed(Seed)
+      ->  reply_json_dict(Seed, [])
+      ;   reply_json_dict(_{}, [status(404)])
+      )
+  ;   with_mutex(seedlist, rocks_merge(seedlist, Hash, _{status: idle}))
+  ).
 % /seed: POST
 seed_method(Request, post, MediaTypes) :-
   http_read_json_dict(Request, Seed, [value_string_as(atom)]),
@@ -145,10 +158,6 @@ seed_get_media_type(Seed, media(text/html,_)) :-
   _{hash: Hash} :< Seed,
   atom_string(Hash, Subtitle),
   html_page(page(_,[Subtitle]), [], [\html_seed(Seed)]).
-
-% /seed: PATCH: application/json
-seed_patch_media_type(Seed, media(application/json,_)) :-
-  reply_json_dict(Seed, []).
 
 % /seed: POST: application/json
 seed_post_media_type(Seed, media(application/json,_)) :-
@@ -198,7 +207,8 @@ html_seed(Seed) -->
       documents: Docs,
       hash: Hash,
       organization: Org,
-      scrape: Scrape
+      scrape: Scrape,
+      status: Status
     } :< Seed,
     _{name: Name, url: Url} :< Dataset,
     _{name: OrgName} :< Org,
@@ -216,6 +226,8 @@ html_seed(Seed) -->
       dd(a(href=Url, Url)),
       dt("Added"),
       dd(AddedStr),
+      dd("Status"),
+      dt(Status),
       dt("Documents"),
       dd(ul(\html_maplist(html_seed_document, Docs))),
       dt("Hash"),

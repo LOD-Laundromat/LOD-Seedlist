@@ -10,6 +10,27 @@
 
 /** <module> LOD Laundromat: Seedlist
 
+Seed keys:
+
+  * dataset(dict)
+    * description(string)
+    * image(atom)
+    * license(atom)
+    * name(atom)
+    * url(atom)
+  * documents(list(atom))
+  * organization(dict)
+    * name(atom)
+    * image(atom)
+    * url(atom)
+  * scrape
+    * added(float)
+    * interval(float)
+    * processed(float)
+  * status(oneof([idle,processing]))
+
+---
+
 @author Wouter Beek
 @version 2018
 */
@@ -47,19 +68,6 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 
 
 %! add_seed(+Seed:dict) is det.
-%
-% Keys:
-%   * dataset(dict)
-%     * description(string)
-%     * image(atom)
-%     * license(atom)
-%     * name(atom)
-%     * url(atom)
-%   * documents(list(atom))
-%   * organization(dict)
-%     * name(atom)
-%     * image(atom)
-%     * url(atom)
 
 add_seed(Seed0) :-
   _{dataset: Dataset0, documents: Urls} :< Seed0,
@@ -91,7 +99,8 @@ add_seed(Seed0) :-
         documents: Urls,
         hash: Hash,
         organization: _{name: OName},
-        scrape: _{added: Now, interval: Interval, processed: 0.0}
+        scrape: _{added: Now, interval: Interval, processed: 0.0},
+        status: idle
       },
       debug(ll, "Added seed: ~a/~a", [OName0,DName0]),
       rocks_put(seedlist, Hash, Seed)
@@ -147,7 +156,7 @@ delete_seed(Hash) :-
 next_seed(Seed) :-
   with_mutex(seedlist, (
     stale_seed_(Now, Hash, Seed),
-    rocks_merge(seedlist, Hash, _{processed: Now})
+    rocks_merge(seedlist, Hash, _{processed: Now, status: processing})
   )).
 
 
@@ -163,7 +172,8 @@ stale_seed_(Now, Hash, Seed) :-
   rocks_value(seedlist, Seed),
   _{hash: Hash, scrape: Scrape} :< Seed,
   _{interval: Interval, processed: Processed} :< Scrape,
-  Processed + Interval < Now.
+  Processed + Interval < Now,
+  \+ _{status: processing} :< Seed.
 
 
 

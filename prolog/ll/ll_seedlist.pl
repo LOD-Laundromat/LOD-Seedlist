@@ -152,6 +152,8 @@ next_seed(Seed) :-
 
 
 
+
+
 % GENERICS %
 
 %! stale_seed_(-Now:float, -Hash:atom, -Seed:dict) is nondet.
@@ -162,6 +164,8 @@ stale_seed_(Now, Hash, Seed) :-
   _{hash: Hash, scrape: Scrape} :< Seed,
   _{interval: Interval, processed: Processed} :< Scrape,
   Processed + Interval < Now.
+
+
 
 
 

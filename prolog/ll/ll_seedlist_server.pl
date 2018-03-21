@@ -197,16 +197,25 @@ html_seed(Seed) -->
       dataset: Dataset,
       documents: Docs,
       hash: Hash,
-      organization: Org
+      organization: Org,
+      scrape: Scrape
     } :< Seed,
     _{name: Name, url: Url} :< Dataset,
-    _{name: OrgName} :< Org
+    _{name: OrgName} :< Org,
+    _{added: Added, interval: Interval, processed: Processed} :< Scrape,
+    format_time(string(AddedStr), "%FT%T%:z", Added),
+    Staleness is Interval + Processed,
+    format_time(string(StalenessStr), "%FT%T%:z", Staleness)
   },
   html([
     h1([OrgName,": ",Name]),
     dl([
+      dt("Staleness time"),
+      dd(StalenessStr),
       dt("URL"),
       dd(a(href=Url, Url)),
+      dt("Added"),
+      dd(AddedStr),
       dt("Documents"),
       dd(ul(\html_maplist(html_seed_document, Docs))),
       dt("Hash"),

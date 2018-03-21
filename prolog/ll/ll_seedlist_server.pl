@@ -156,10 +156,7 @@ seed_post_media_type(Seed, media(application/json,_)) :-
   (   var(E)
   ->  reply_json_dict(_{}, [status(201)])
   ;   E = error(existence_error(seed,_Hash),_Context)
-  ->  reply_json_dict(
-        _{message: "Seed with the same hash already exists."},
-        [status(400)]
-      )
+  ->  reply_json_dict(_{message: "A seed with the same hash already exists."})
   ).
 
 % /seed: GET,HEAD: application/json

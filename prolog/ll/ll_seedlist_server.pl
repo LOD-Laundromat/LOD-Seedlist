@@ -87,11 +87,11 @@ seed_method(Request, delete, MediaTypes) :-
   with_mutex(seedlist,
     (   rocks_key(seedlist, Hash)
     ->  rocks_delete(seedlist, Hash),
-        Success = 200
-    ;   Success = 404
+        Status = 200
+    ;   Status = 404
     )
   ),
-  rest_media_type(MediaTypes, seed_delete_media_type(Success)).
+  rest_media_type(MediaTypes, retract_seed_media_type(Status)).
 % /seed: GET,HEAD
 seed_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
@@ -117,9 +117,11 @@ seed_method(Request, Method, MediaTypes) :-
         Options,
         Page
       ),
-      rest_media_type(MediaTypes, seeds_get_media_type(Page))
-  ;   rocks(seedlist, Hash, Seed),
-      rest_media_type(MediaTypes, seed_get_media_type(Seed))
+      rest_media_type(MediaTypes, list_seeds_media_type(Page))
+  ;   rocks(seedlist, Hash, Seed)
+  ->  rest_media_type(MediaTypes, seed_media_type(Seed))
+  ;   format(string(Msg), "Hash ‘~a’ does not exist.", [Hash]),
+      rest_media_type(MediaTypes, existence_error_media_type(Hash, Msg))
   ).
 % /seed: PATCH
 seed_method(Request, patch, _) :-
@@ -141,26 +143,15 @@ seed_method(Request, patch, _) :-
 % /seed: POST
 seed_method(Request, post, MediaTypes) :-
   http_read_json_dict(Request, Seed, [value_string_as(atom)]),
-  rest_media_type(MediaTypes, seed_post_media_type(Seed)).
+  rest_media_type(MediaTypes, assert_seed_media_type(Seed)).
 
-% /seed: DELETE: application/json
-seed_delete_media_type(Status, media(application/json,_)) :-
-  reply_json_dict(_{}, [status(Status)]).
 
-% /seed: GET,HEAD: application/json
-seed_get_media_type(Page, media(application/json,_)) :-
-  http_pagination_json(Page).
-% /seed/$(HASH): GET, HEAD: application/json
-seed_get_media_type(Seed, media(application/json,_)) :-
-  reply_json_dict(Seed).
-% /seed/$(HASH): GET, HEAD: text/html
-seed_get_media_type(Seed, media(text/html,_)) :-
-  _{hash: Hash} :< Seed,
-  atom_string(Hash, Subtitle),
-  html_page(page(_,[Subtitle]), [], [\html_seed(Seed)]).
 
+%! assert_seed_media_type(+Seed:dict, +MediaType:compound) is det.
+%
 % /seed: POST: application/json
-seed_post_media_type(Seed, media(application/json,_)) :-
+
+assert_seed_media_type(Seed, media(application/json,_)) :-
   catch(add_seed(Seed), E, true),
   (   var(E)
   ->  reply_json_dict(_{}, [status(201)])
@@ -168,17 +159,56 @@ seed_post_media_type(Seed, media(application/json,_)) :-
   ->  reply_json_dict(_{message: "A seed with the same hash already exists."})
   ).
 
-% /seed: GET,HEAD: application/json
-seeds_get_media_type(Page, media(application/json,_)) :-
+
+
+%! existence_error_media_type(+Hash:atom, +MediaType:compound) is det.
+%
+% /seed/$(HASH): application/json, text/html
+
+existence_error_media_type(Hash, Msg, media(application/json)) :-
+  reply_json_dict(_{hash: Hash, message: Msg}, [status(404)]).
+existence_error_media_type(Hash, Msg, media(test/html)) :-
+  html_page(
+    page(_,["Seed",Hash]),
+    [],
+    [h1("Existence error"),p(Msg)]
+  ).
+
+
+
+%! list_seeds_media_type(+Page:dict, +MediaType:compound) is det.
+%
+% /seed: GET,HEAD: application/json, text/html
+
+list_seeds_media_type(Page, media(application/json,_)) :-
   http_pagination_json(Page).
-% /seed: GET,HEAD: text/html
-seeds_get_media_type(Page, media(text/html,_)) :-
+list_seeds_media_type(Page, media(text/html,_)) :-
   html_page(
     page(Page,["Seed"]),
     [],
     [\html_pagination_result(Page, html_seed_table)]
   ).
-  
+
+
+
+%! retract_seed_media_type(+Status:between(100,599), +MediaType:compound) is det.
+
+% /seed: DELETE: application/json
+retract_seed_media_type(Status, media(application/json,_)) :-
+  reply_json_dict(_{}, [status(Status)]).
+
+
+
+%! seed_media_type(+Seed:dict, +MediaType:compound) is det.
+
+% /seed/$(HASH): GET, HEAD: application/json, text/html
+seed_media_type(Seed, media(application/json,_)) :-
+  reply_json_dict(Seed).
+seed_media_type(Seed, media(text/html,_)) :-
+  _{hash: Hash} :< Seed,
+  atom_string(Hash, Subtitle),
+  html_page(page(_,[Subtitle]), [], [\html_seed(Seed)]).
+
 
 
 

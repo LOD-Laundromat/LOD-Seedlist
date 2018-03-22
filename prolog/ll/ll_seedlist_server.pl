@@ -6,6 +6,7 @@
 @version 2018
 */
 
+:- use_module(library(http/http_authenticate)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_path)).

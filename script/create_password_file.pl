@@ -11,6 +11,7 @@
 @version 2018
 */
 
+:- use_module(library(crypt)).
 :- use_module(library(http/http_authenticate)).
 :- use_module(library(settings)).
 
@@ -24,4 +25,6 @@
 
 create_password_file(User, Password) :-
   setting(ll_seedlist:password_file, File),
-  http_write_passwd_file(File, [passwd(User,Password,[])]).
+  crypt(Password, Hash),
+  name(Atomic, Hash),
+  http_write_passwd_file(File, [passwd(User,Atomic,[])]).

@@ -42,6 +42,7 @@ Seed keys:
 :- use_module(library(pairs)).
 :- use_module(library(settings)).
 
+:- use_module(library(conf_ext)).
 :- use_module(library(dcg)).
 :- use_module(library(dict)).
 :- use_module(library(hash_ext)).
@@ -53,7 +54,7 @@ Seed keys:
 :- at_halt(maplist(rocks_close, [seedlist])).
 
 :- initialization
-   rocks_init(seedlist, [key(atom),merge(ll_seedlist:merge_dicts),value(term)]).
+   ll_seedlist_init.
 
 merge_dicts(partial, _, New, In, Out) :-
   merge_dicts(New, In, Out).
@@ -62,6 +63,8 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 
 :- setting(default_interval, float, 86400.0,
            "The default interval for recrawling.").
+:- setting(password_file, any, _,
+           "The file containing basic authentication user-password pairs.").
 
 
 
@@ -245,3 +248,21 @@ triply_name_, "-" -->
   [_], !,
   triply_name_.
 triply_name_--> "".
+
+
+
+
+
+% INITIALIZATION %
+
+%! ll_seedlist_init is det.
+
+ll_seedlist_init :-
+  rocks_init(seedlist, [key(atom),merge(ll_seedlist:merge_dicts),value(term)]),
+  conf_json(Conf),
+  % interval
+  _{'default-interval': Interval} :< Conf,
+  set_setting(default_interval, Interval),
+  % password file
+  _{'password-file': File} :< Conf,
+  set_setting(password_file, File).

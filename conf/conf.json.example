@@ -1,6 +1,8 @@
 {
+  "default-interval": 86400.0,
   "rocks": {
-    "directory": "/home/wbeek/data/ll/rocks",
+    "directory": "DIRECTORY"
     "nofiles": 10000
-  }
+  },
+  "password-file": "FILE"
 }

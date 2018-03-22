@@ -77,6 +77,8 @@ seed_handler(Request) :-
 
 % /seed: DELETE
 seed_method(Request, delete, MediaTypes) :-
+  setting(ll_seedlist:password_file, File),
+  http_authenticate(basic(File), Request, _),
   rest_parameters(
     Request,
     [

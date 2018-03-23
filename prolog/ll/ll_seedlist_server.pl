@@ -78,8 +78,7 @@ seed_handler(Request) :-
 
 % /seed: DELETE
 seed_method(Request, delete, MediaTypes) :-
-  setting(ll_seedlist:password_file, File),
-  http_authenticate(basic(File), Request, _),
+  auth_(Request),
   rest_parameters(
     Request,
     [
@@ -128,6 +127,7 @@ seed_method(Request, Method, MediaTypes) :-
   ).
 % /seed: PATCH
 seed_method(Request, patch, _) :-
+  auth_(Request),
   rest_parameters(
     Request,
     [
@@ -145,6 +145,7 @@ seed_method(Request, patch, _) :-
   ).
 % /seed: POST
 seed_method(Request, post, MediaTypes) :-
+  auth_(Request),
   http_read_json_dict(Request, Seed, [value_string_as(atom)]),
   rest_media_type(MediaTypes, assert_seed_media_type(Seed)).
 
@@ -275,7 +276,7 @@ html_seed_document(Doc) -->
 
 
 
-% HTML style %
+% HTML STYLE %
 
 html:rest_exception(Dict) :-
   html_page(
@@ -305,3 +306,15 @@ user:head(page(Page,Subtitles), Content_0) -->
 
 user:body(page(_,_), Content_0) -->
   html(body([\navbar("Seedlist", \menu), \row_1(Content_0)])).
+
+
+
+
+
+% HELPERS %
+
+%! auth_(+Request:list(compound)) is det.
+
+auth_(Request) :-
+  setting(ll_seedlist:password_file, File),
+  http_authenticate(basic(File), Request, _).

@@ -78,22 +78,24 @@ seed_handler(Request) :-
 
 % /seed: DELETE
 seed_method(Request, delete, MediaTypes) :-
-  auth_(Request),
-  rest_parameters(
-    Request,
-    [
-      hash(Hash, [atom,
-                  description("Hash key of the seed that is to be deleted.")])
-    ]
-  ),
-  with_mutex(seedlist,
-    (   rocks_key(seedlist, Hash)
-    ->  rocks_delete(seedlist, Hash),
-        Status = 200
-    ;   Status = 404
-    )
-  ),
-  rest_media_type(MediaTypes, retract_seed_media_type(Status)).
+  (   auth_(Request)
+  ->  rest_parameters(
+        Request,
+        [
+          hash(Hash, [atom,
+                      description("Hash key of the seed that is to be deleted.")])
+        ]
+      ),
+      with_mutex(seedlist,
+        (   rocks_key(seedlist, Hash)
+        ->  rocks_delete(seedlist, Hash),
+            Status = 200
+        ;   Status = 404
+        )
+      ),
+      rest_media_type(MediaTypes, retract_seed_media_type(Status))
+  ;   reply_json_dict(_{}, [status(403)])
+  ).
 % /seed: GET,HEAD
 seed_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
@@ -127,27 +129,31 @@ seed_method(Request, Method, MediaTypes) :-
   ).
 % /seed: PATCH
 seed_method(Request, patch, _) :-
-  auth_(Request),
-  rest_parameters(
-    Request,
-    [
-      hash(Hash, [atom,
-                  description("Hash key of the patched seed, if any."),
-                  optional(true)])
-    ]
-  ),
-  (   var(Hash),
-      (   next_seed(Seed)
-      ->  reply_json_dict(Seed, [])
-      ;   reply_json_dict(_{}, [status(404)])
+  (   auth_(Request)
+  ->  rest_parameters(
+        Request,
+        [
+          hash(Hash, [atom,
+                      description("Hash key of the patched seed, if any."),
+                      optional(true)])
+        ]
+      ),
+      (   var(Hash),
+          (   next_seed(Seed)
+          ->  reply_json_dict(Seed, [])
+          ;   reply_json_dict(_{}, [status(404)])
+          )
+      ;   with_mutex(seedlist, rocks_merge(seedlist, Hash, _{status: idle}))
       )
-  ;   with_mutex(seedlist, rocks_merge(seedlist, Hash, _{status: idle}))
+  ;   reply_json_dict(_{}, [status(403)])
   ).
 % /seed: POST
 seed_method(Request, post, MediaTypes) :-
-  auth_(Request),
-  http_read_json_dict(Request, Seed, [value_string_as(atom)]),
-  rest_media_type(MediaTypes, assert_seed_media_type(Seed)).
+  (   auth_(Request)
+  ->  http_read_json_dict(Request, Seed, [value_string_as(atom)]),
+      rest_media_type(MediaTypes, assert_seed_media_type(Seed))
+  ;   reply_json_dict(_{}, [status(403)])
+  ).
 
 
 

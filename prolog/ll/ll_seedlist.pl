@@ -4,7 +4,8 @@
     add_seed/1,       % +Seed
     clear_seedlist/0,
     delete_seed/1,    % +Hash
-    next_seed/1       % -Seed
+    end_seed/1,       % +Hash
+    start_seed/1      % -Seed
   ]
 ).
 
@@ -152,11 +153,20 @@ delete_seed(Hash) :-
 
 
 
-%! next_seed(-Seed:dict) is det.
+%! end_seed(+Hash:atom) is det.
+
+end_seed(Hash) :-
+  with_mutex(seedlist,
+    rocks_merge(seedlist, Hash, _{status: idle})
+  ).
+
+
+
+%! start_seed(-Seed:dict) is det.
 %
 % Gives the next stale seed for processing.
 
-next_seed(Seed) :-
+start_seed(Seed) :-
   with_mutex(seedlist, (
     stale_seed_(Now, Hash, Seed),
     rocks_merge(seedlist, Hash, _{processed: Now, status: processing})

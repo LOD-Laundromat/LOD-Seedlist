@@ -138,12 +138,14 @@ seed_method(Request, patch, _) :-
                       optional(true)])
         ]
       ),
-      (   var(Hash),
-          (   next_seed(Seed)
+      (   var(Hash)
+      ->  (   start_seed(Seed)
           ->  reply_json_dict(Seed, [])
           ;   reply_json_dict(_{}, [status(404)])
           )
-      ;   with_mutex(seedlist, rocks_merge(seedlist, Hash, _{status: idle}))
+      ;   rocks_key(seedlist, Hash)
+      ->  end_seed(Hash)
+      ;   reply_json_dict(_{}, [status(404)])
       )
   ;   reply_json_dict(_{}, [status(403)])
   ).
@@ -266,8 +268,8 @@ html_seed(Seed) -->
       dd(a(href=Url, Url)),
       dt("Added"),
       dd(AddedStr),
-      dd("Status"),
-      dt(Status),
+      dt("Status"),
+      dd(Status),
       dt("Documents"),
       dd(ul(\html_maplist(html_seed_document, Docs))),
       dt("Hash"),

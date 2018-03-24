@@ -1,11 +1,11 @@
 :- module(
   ll_seedlist,
   [
-    add_seed/1,       % +Seed
-    clear_seedlist/0,
-    delete_seed/1,    % +Hash
-    end_seed/1,       % +Hash
-    start_seed/1      % -Seed
+    assert_seed/1,   % +Seed
+    pop_seed/1,      % -Seed
+    retract_seed/1,  % +Hash
+    seed_by_hash/2,  % +Hash, -Seed
+    seed_by_status/2 % +Status, -Seed
   ]
 ).
 
@@ -71,9 +71,9 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 
 
 
-%! add_seed(+Seed:dict) is det.
+%! assert_seed(+Seed:dict) is det.
 
-add_seed(Seed0) :-
+assert_seed(Seed0) :-
   _{dataset: Dataset0, documents: Urls} :< Seed0,
   _{name: DName0, url: Url} :< Dataset0,
   get_time(Now),
@@ -136,57 +136,45 @@ seed_license(_, Dict, Dict).
 
 
 
-%! clear_seedlist is det.
+%! pop_seed(-Seed:dict) is semidet.
 
-clear_seedlist :-
-  forall(
-    rocks_key(seedlist, Key),
-    rocks_delete(seedlist, Key)
-  ).
-
-
-
-%! delete_seed(+Hash:atom) is det.
-
-delete_seed(Hash) :-
-  rocks_delete(seedlist, Hash).
-
-
-
-%! end_seed(+Hash:atom) is det.
-
-end_seed(Hash) :-
-  with_mutex(seedlist,
-    rocks_merge(seedlist, Hash, _{status: idle})
-  ).
-
-
-
-%! start_seed(-Seed:dict) is det.
-%
-% Gives the next stale seed for processing.
-
-start_seed(Seed) :-
+pop_seed(Seed) :-
   with_mutex(seedlist, (
-    stale_seed_(Now, Hash, Seed),
+    seed_by_status_(Now, Hash, idle, Seed),
     rocks_merge(seedlist, Hash, _{processed: Now, status: processing})
   )).
 
 
 
+%! retract_seed(+Hash:atom) is det.
+
+retract_seed(Hash) :-
+  rocks_delete(seedlist, Hash).
 
 
-% GENERICS %
 
-%! stale_seed_(-Now:float, -Hash:atom, -Seed:dict) is nondet.
+%! seed_by_hash(+Hash:atom, -Seed:dict) is semidet.
+%! seed_by_hash(-Hash:atom, -Seed:dict) is nondet.
 
-stale_seed_(Now, Hash, Seed) :-
+seed_by_hash(Hash, Seed) :-
+  rocks(seedlist, Hash, Seed).
+
+
+
+%! seed_by_status(+Status:oneof([idle,processing,stale]), -Seed:dict) is nondet.
+
+seed_by_status(processing, Seed) :- !,
+  rocks_value(seedlist, Seed),
+  _{status: processing} :< Seed.
+seed_by_status(Status, Seed) :-
+  seed_by_status_(_, _, Status, Seed).
+
+seed_by_status_(Now, Hash, Status, Seed) :-
   get_time(Now),
   rocks_value(seedlist, Seed),
-  _{hash: Hash, scrape: Scrape} :< Seed,
+  _{hash: Hash, scrape: Scrape, status: idle} :< Seed,
   _{interval: Interval, processed: Processed} :< Scrape,
-  Processed + Interval < Now,
-  \+ _{status: processing} :< Seed.
+  (Status == idle -> Processed + Interval < Now ; Status == stale).
 
 
 

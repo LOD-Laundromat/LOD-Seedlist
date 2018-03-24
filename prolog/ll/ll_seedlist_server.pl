@@ -139,7 +139,7 @@ seed_method(Request, post, MediaTypes) :-
   rest_media_type(MediaTypes, seed_post_media_type(Request)).
 
 % /seed: DELETE: application/json
-seed_delete_media_type(Request, media(application/json)) :-
+seed_delete_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
   ->  rest_parameters(Request, [hash(Hash)]),
       with_mutex(seedlist,
@@ -154,7 +154,7 @@ seed_delete_media_type(Request, media(application/json)) :-
   ).
 
 % /seed: POST: application/json
-seed_post_media_type(Request, media(application/json)) :-
+seed_post_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
   ->  http_read_json_dict(Request, Seed, [value_string_as(atom)]),
       catch(assert_seed(Seed), E, true),
@@ -189,7 +189,7 @@ seed_processing_method(Request, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_processing_media_type(Request)).
 
 % /seed/processing: PATCH: application/json
-seed_processing_media_type(Request, media(application/json)) :-
+seed_processing_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
   ->  rest_parameters(Request, [hash(Hash)]),
       (   rocks_key(seedlist, Hash)
@@ -213,7 +213,7 @@ seed_stale_method(_, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_stale_media_type).
 
 % /seed/stale: PATCH: application/json
-seed_stale_media_type(media(application/json)) :-
+seed_stale_media_type(media(application/json,_)) :-
   (   pop_seed(Seed)
   ->  reply_json_dict(Seed, [])
   ;   reply_json_dict(_{}, [status(404)])
@@ -240,9 +240,9 @@ seed_by_status_method(Status, Request, MediaTypes) :-
 %
 % /seed/$(HASH): application/json, text/html
 
-existence_error_media_type(Hash, Msg, media(application/json)) :-
+existence_error_media_type(Hash, Msg, media(application/json,_)) :-
   reply_json_dict(_{hash: Hash, message: Msg}, [status(404)]).
-existence_error_media_type(Hash, Msg, media(test/html)) :-
+existence_error_media_type(Hash, Msg, media(test/html,_)) :-
   html_page(
     page(_,["Seed",Hash]),
     [],

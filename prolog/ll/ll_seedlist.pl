@@ -174,7 +174,8 @@ seed_by_status_(Now, Hash, Status, Seed) :-
   rocks_value(seedlist, Seed),
   _{hash: Hash, scrape: Scrape, status: idle} :< Seed,
   _{interval: Interval, processed: Processed} :< Scrape,
-  (Status == idle -> Processed + Interval < Now ; Status == stale).
+  N is Processed + Interval,
+  (Status == idle -> N < Now ; Status == stale -> N >= Now).
 
 
 

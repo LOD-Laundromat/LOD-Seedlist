@@ -78,8 +78,7 @@ http:media_types(seed_processing_handler, [media(application/json),
 http:media_types(seed_stale_handler, [media(application/json),
                                       media(text/html)]).
 
-http:param(hash, [atom,
-                  description("Hash key of the requested seed, if any.")]).
+http:param(hash, [atom,description("Hash key of the requested seed.")]).
 
 :- set_setting(http:products, ["LOD-Seedlist"-"v0.0.0"]).
 
@@ -114,8 +113,15 @@ seed_method(Request, delete, MediaTypes) :-
 % /seed: GET
 seed_method(Request, Method, MediaTypes) :-gtrace,
   http_is_get(Method), !,
-  rest_parameters(Request, [hash(Hash)]),
-  (   seed_by_hash(Hash, Seed)
+  rest_parameters(
+    Request,
+    [hash(Hash, [atom,optional(true)]),page(PageNumber),page_size(PageSize)]
+  ),
+  (   var(Hash)
+  ->  Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
+      pagination(Seed, rocks_value(seedlist, Seed), rocks_size(seedlist), Page),
+      rest_media_type(MediaTypes, list_seeds_media_type(_, Page))
+  ;   seed_by_hash(Hash, Seed)
   ->  rest_media_type(MediaTypes, seed_media_type(Seed))
   ;   format(string(Msg), "Hash ‘~a’ does not exist.", [Hash]),
       rest_media_type(MediaTypes, existence_error_media_type(Hash, Msg))
@@ -237,7 +243,7 @@ existence_error_media_type(Hash, Msg, media(test/html)) :-
 
 
 
-%! list_seeds_media_type(+Status:oneof([idle,processing,stale]), +Page:dict,
+%! list_seeds_media_type(?Status:oneof([idle,processing,stale]), +Page:dict,
 %!                       +MediaType:compound) is det.
 %
 % /seed: GET,HEAD: application/json, text/html
@@ -245,9 +251,9 @@ existence_error_media_type(Hash, Msg, media(test/html)) :-
 list_seeds_media_type(_, Page, media(application/json,_)) :-
   http_pagination_json(Page).
 list_seeds_media_type(Status, Page, media(text/html,_)) :-
-  atom_capitalize(Status, Label),
+  (var(Status) -> T = [] ; atom_capitalize(Status, Label), T = [Label]),
   html_page(
-    page(Page,["Seed",Label]),
+    page(Page,["Seed"|T]),
     [],
     [\html_pagination_result(Page, html_seed_table)]
   ).

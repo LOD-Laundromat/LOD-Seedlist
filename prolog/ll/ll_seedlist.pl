@@ -256,11 +256,11 @@ triply_name_--> "".
 %! ll_seedlist_init is det.
 
 ll_seedlist_init :-
-  rocks_init(seedlist, [key(atom),merge(ll_seedlist:merge_dicts),value(term)]),
   conf_json(Conf),
   % interval
   _{'default-interval': Interval} :< Conf,
   set_setting(default_interval, Interval),
   % password file
   _{'password-file': File} :< Conf,
-  set_setting(password_file, File).
+  set_setting(password_file, File),
+  rocks_init(seedlist, [key(atom),merge(ll_seedlist:merge_dicts),value(term)]).

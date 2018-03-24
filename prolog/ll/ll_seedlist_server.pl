@@ -111,15 +111,23 @@ seed_handler(Request) :-
 seed_method(Request, delete, MediaTypes) :-
   rest_media_type(MediaTypes, seed_delete_media_type(Request)).
 % /seed: GET
-seed_method(Request, Method, MediaTypes) :-gtrace,
+seed_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
   rest_parameters(
     Request,
     [hash(Hash, [atom,optional(true)]),page(PageNumber),page_size(PageSize)]
   ),
   (   var(Hash)
-  ->  Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
-      pagination(Seed, rocks_value(seedlist, Seed), rocks_size(seedlist), Page),
+  ->  memberchk(request_uri(RelUri), Request),
+      http_absolute_uri(RelUri, Uri),
+      Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
+      pagination(
+        Seed,
+        rocks_value(seedlist, Seed),
+        rocks_size(seedlist),
+        Options,
+        Page
+      ),
       rest_media_type(MediaTypes, list_seeds_media_type(_, Page))
   ;   seed_by_hash(Hash, Seed)
   ->  rest_media_type(MediaTypes, seed_media_type(Seed))

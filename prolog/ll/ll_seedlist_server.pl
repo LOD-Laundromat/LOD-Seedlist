@@ -221,7 +221,7 @@ seed_stale_media_type(media(application/json,_)) :-
   ;   reply_json_dict(_{}, [status(404)])
   ).
 
-% ...: GET,HEAD: application/json, text/html
+% /seed/*: GET,HEAD
 seed_by_status_method(Status, Request, MediaTypes) :-
   rest_parameters(Request, [page(PageNumber),page_size(PageSize)]),
   memberchk(request_uri(RelUri), Request),

@@ -197,7 +197,11 @@ seed_processing_media_type(Request, media(application/json,_)) :-
       ->  get_time(Now),
           with_mutex(
             seedlist,
-            rocks_merge(seedlist, Hash, _{processed: Now, processing: false})
+            rocks_merge(
+              seedlist,
+              Hash,
+              _{processing: false, scrape: _{processed: Now}}
+            )
           ),
           reply_json_dict(_{}, [])
       ;   reply_json_dict(_{}, [status(404)])
@@ -220,7 +224,10 @@ seed_stale_method(_, patch, MediaTypes) :-
 
 % /seed/stale: PATCH: application/json
 seed_stale_media_type(media(application/json,_)) :-
-  (   pop_seed(Seed)
+  (   with_mutex(seedlist, (
+        seed_by_status_(_, Hash, stale, Seed),
+        rocks_merge(seedlist, Hash, _{processing: true})
+      ))
   ->  reply_json_dict(Seed, [])
   ;   reply_json_dict(_{}, [status(404)])
   ).

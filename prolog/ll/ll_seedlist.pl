@@ -2,7 +2,6 @@
   ll_seedlist,
   [
     assert_seed/1,   % +Seed
-    pop_seed/1,      % -Seed
     retract_seed/1,  % +Hash
     seed_by_hash/2,  % +Hash, -Seed
     seed_by_status/2 % +Status, -Seed
@@ -138,16 +137,6 @@ seed_license(Seed0, Dict1, Dict2) :-
       Dict2 = Dict1
   ).
 seed_license(_, Dict, Dict).
-
-
-
-%! pop_seed(-Seed:dict) is semidet.
-
-pop_seed(Seed) :-
-  with_mutex(seedlist, (
-    seed_by_status_(Now, Hash, stale, Seed),
-    rocks_merge(seedlist, Hash, _{processed: Now, processing: true})
-  )).
 
 
 

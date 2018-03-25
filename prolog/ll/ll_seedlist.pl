@@ -74,20 +74,18 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 %! assert_seed(+Seed:dict) is det.
 
 assert_seed(Seed0) :-
-  _{dataset: Dataset0, documents: Urls} :< Seed0,
+  _{dataset: Dataset0, documents: Urls, 'last-modified': LMod} :< Seed0,
   _{name: DName0, url: Url} :< Dataset0,
   get_time(Now),
   % interval
-  (   catch(http_metadata_last_modified(Url, LMod), _, fail)
-  ->  Interval is Now - LMod
-  ;   setting(default_interval, Interval)
-  ),
+  Interval is Now - LMod,
+  % hash
   uri_hash(Url, Hash),
   (   % The URL has already been added to the seedlist.
       rocks_key(seedlist, Hash)
   ->  existence_error(seed, Hash)
   ;   organization_name(Url, Seed0, OName0),
-      % Normalize for Triply names.
+      % Normalize names for Triply Cloud.
       maplist(triply_name, [OName0,DName0], [OName,DName]),
       % prefixes
       bnode_prefix_([OName,DName], BNodePrefix),
@@ -103,7 +101,12 @@ assert_seed(Seed0) :-
         documents: Urls,
         hash: Hash,
         organization: _{name: OName},
-        scrape: _{added: Now, interval: Interval, processed: 0.0},
+        scrape: _{
+          added: Now,
+          interval: Interval,
+          'last-modified': LMod,
+          processed: 0.0
+        },
         status: idle
       },
       debug(ll, "Added seed: ~a/~a", [OName0,DName0]),

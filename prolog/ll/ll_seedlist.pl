@@ -38,7 +38,6 @@ Seed keys:
 */
 
 :- use_module(library(apply)).
-:- use_module(library(debug)).
 :- use_module(library(error)).
 :- use_module(library(lists)).
 :- use_module(library(pairs)).
@@ -75,20 +74,19 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 %! assert_seed(+Seed:dict) is det.
 
 assert_seed(Seed0) :-
-  _{dataset: Dataset0, documents: Urls, 'last-modified': LMod} :< Seed0,
-  _{name: DName0, url: Url} :< Dataset0,
+  _{name: DName0, url: Url} :< Seed0.dataset,
   get_time(Now),
   % interval
-  Interval is Now - LMod,
+  Interval is Now - Seed0.'last-modified',
+  organization_name(Url, Seed0, OName0),
+  % Normalize names for Triply Cloud.
+  maplist(triply_name, [OName0,DName0], [OName,DName]),
   % hash
-  uri_hash(Url, Hash),
+  md5(OName-DName, Hash),
   (   % The URL has already been added to the seedlist.
       rocks_key(seedlist, Hash)
   ->  existence_error(seed, Hash)
-  ;   organization_name(Url, Seed0, OName0),
-      % Normalize names for Triply Cloud.
-      maplist(triply_name, [OName0,DName0], [OName,DName]),
-      % prefixes
+  ;   % prefixes
       bnode_prefix_([OName,DName], BNodePrefix),
       Dataset1 = _{
         name: DName,
@@ -99,18 +97,17 @@ assert_seed(Seed0) :-
       seed_license(Seed0, Dataset1, Dataset2),
       Seed = _{
         dataset: Dataset2,
-        documents: Urls,
+        documents: Seed0.documents,
         hash: Hash,
         organization: _{name: OName},
         processing: false,
         scrape: _{
           added: Now,
           interval: Interval,
-          'last-modified': LMod,
+          'last-modified': Seed0.'last-modified',
           processed: 0.0
         }
       },
-      debug(ll, "Added seed: ~a/~a", [OName0,DName0]),
       rocks_put(seedlist, Hash, Seed)
   ).
 
@@ -132,8 +129,7 @@ seed_license(Seed0, Dict1, Dict2) :-
   _{license: License0} :< Seed0.dataset,
   (   triply_license(License0, License)
   ->  Dict2 = Dict1.put(_{license: License})
-  ;   debug(ll, "No license for ~w", [Seed0]),
-      Dict2 = Dict1
+  ;   Dict2 = Dict1
   ).
 seed_license(_, Dict, Dict).
 

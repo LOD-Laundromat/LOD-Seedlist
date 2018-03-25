@@ -225,7 +225,7 @@ seed_stale_method(_, patch, MediaTypes) :-
 % /seed/stale: PATCH: application/json
 seed_stale_media_type(media(application/json,_)) :-
   (   with_mutex(seedlist, (
-        seed_by_status_(_, Hash, stale, Seed),
+        seed_by_status(stale, Hash, Seed),
         rocks_merge(seedlist, Hash, _{processing: true})
       ))
   ->  reply_json_dict(Seed, [])
@@ -240,8 +240,8 @@ seed_by_status_method(Status, Request, MediaTypes) :-
   Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
   pagination(
     Seed,
-    seed_by_status(Status, Seed),
-    {Status}/[N]>>aggregate_all(count, seed_by_status(Status, _), N),
+    seed_by_status(Status, _, Seed),
+    {Status}/[N]>>aggregate_all(count, seed_by_status(Status, _, _), N),
     Options,
     Page
   ),

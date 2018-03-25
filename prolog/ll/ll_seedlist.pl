@@ -4,7 +4,7 @@
     assert_seed/1,   % +Seed
     retract_seed/1,  % +Hash
     seed_by_hash/2,  % +Hash, -Seed
-    seed_by_status/2 % +Status, -Seed
+    seed_by_status/3 % +Status, -Hash, -Seed
   ]
 ).
 
@@ -155,15 +155,13 @@ seed_by_hash(Hash, Seed) :-
 
 
 
-%! seed_by_status(+Status:oneof([idle,processing,stale]), -Seed:dict) is nondet.
+%! seed_by_status(+Status:oneof([idle,processing,stale]), -Hash:atom,
+%!                -Seed:dict) is nondet.
 
-seed_by_status(processing, Seed) :- !,
+seed_by_status(processing, Hash, Seed) :- !,
   rocks_value(seedlist, Seed),
-  _{processing: true} :< Seed.
-seed_by_status(Status, Seed) :-
-  seed_by_status_(_, _, Status, Seed).
-
-seed_by_status_(Now, Hash, Status, Seed) :-
+  _{hash: Hash, processing: true} :< Seed.
+seed_by_status(Status, Hash, Seed) :-
   get_time(Now),
   rocks_value(seedlist, Seed),
   _{hash: Hash, processing: false, scrape: Scrape} :< Seed,

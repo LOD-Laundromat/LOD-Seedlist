@@ -7,6 +7,7 @@
 */
 
 :- use_module(library(aggregate)).
+:- use_module(library(apply)).
 :- use_module(library(http/http_authenticate)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_json)).
@@ -320,15 +321,17 @@ html_seed(Seed) -->
     ignore(get_dict(url, Org, OUrl)),
     % scrape
     _{
-      added: Added,
+      added: Added0,
       interval: Interval,
-      'last-modified': LMod,
-      processed: Processed
+      'last-modified': LMod0,
+      processed: Processed0
     } :< Scrape,
-    format_time(string(AddedStr), "%FT%T%:z", Added),
-    format_time(string(ProcessedStr), "%FT%T%:z", Processed),
-    Staleness is Interval + Processed,
-    format_time(string(StalenessStr), "%FT%T%:z", Staleness)
+    Staleness0 is Interval + Processed0,
+    maplist(
+      format_time_,
+      [Added0,LMod0,Processed0,Staleness0],
+      [Added,LMod,Processed,Staleness]
+    )
   },
   html([
     h1([OName,": ",DName]),
@@ -359,15 +362,15 @@ html_seed(Seed) -->
       dd(
         dl([
           dt("Added"),
-          dd(AddedStr),
+          dd(Added),
           dt("Interval"),
           dd(Interval),
           dt("Last modified"),
           dd(LMod),
           dt("Processed"),
-          dd(ProcessedStr),
+          dd(Processed),
           dt("Staleness time"),
-          dd(StalenessStr)
+          dd(Staleness)
         ])
       )
     ])
@@ -392,7 +395,12 @@ name(Name) -->
   html([dt("Name"),dd(Name)]).
 
 url(Url) -->
+  {var(Url)}, !.
+url(Url) -->
   html([dt("URL"),dd(a(href=Url, code(Url)))]).
+
+format_time_(N, Str) :-
+  format_time(string(Str), "%FT%T%:z", N).
 
 html_seed_document(Doc) -->
   html(li(a(href=Doc, Doc))).

@@ -25,12 +25,12 @@ Seed keys:
     * name(atom)
     * image(atom)
     * url(atom)
+  * processing(boolean)
   * scrape
     * added(float)
     * interval(float)
     * last-modified(float)
     * processed(float)
-  * status(oneof([idle,processing]))
 
 ---
 
@@ -103,13 +103,13 @@ assert_seed(Seed0) :-
         documents: Urls,
         hash: Hash,
         organization: _{name: OName},
+        processing: false,
         scrape: _{
           added: Now,
           interval: Interval,
           'last-modified': LMod,
           processed: 0.0
-        },
-        status: idle
+        }
       },
       debug(ll, "Added seed: ~a/~a", [OName0,DName0]),
       rocks_put(seedlist, Hash, Seed)
@@ -145,8 +145,8 @@ seed_license(_, Dict, Dict).
 
 pop_seed(Seed) :-
   with_mutex(seedlist, (
-    seed_by_status_(Now, Hash, idle, Seed),
-    rocks_merge(seedlist, Hash, _{processed: Now, status: processing})
+    seed_by_status_(Now, Hash, stale, Seed),
+    rocks_merge(seedlist, Hash, _{processed: Now, processing: true})
   )).
 
 
@@ -170,14 +170,14 @@ seed_by_hash(Hash, Seed) :-
 
 seed_by_status(processing, Seed) :- !,
   rocks_value(seedlist, Seed),
-  _{status: processing} :< Seed.
+  _{processing: true} :< Seed.
 seed_by_status(Status, Seed) :-
   seed_by_status_(_, _, Status, Seed).
 
 seed_by_status_(Now, Hash, Status, Seed) :-
   get_time(Now),
   rocks_value(seedlist, Seed),
-  _{hash: Hash, scrape: Scrape, status: idle} :< Seed,
+  _{hash: Hash, processing: false, scrape: Scrape} :< Seed,
   _{interval: Interval, processed: Processed} :< Scrape,
   N is Processed + Interval,
   (Status == idle -> N >= Now ; Status == stale -> N < Now).

@@ -197,7 +197,7 @@ seed_processing_media_type(Request, media(application/json,_)) :-
       ->  get_time(Now),
           with_mutex(
             seedlist,
-            rocks_merge(seedlist, Hash, _{processed: Now, status: idle})
+            rocks_merge(seedlist, Hash, _{processed: Now, processing: false})
           ),
           reply_json_dict(_{}, [])
       ;   reply_json_dict(_{}, [status(404)])

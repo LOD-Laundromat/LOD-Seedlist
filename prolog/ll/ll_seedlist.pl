@@ -115,10 +115,9 @@ assert_seed(Seed0) :-
   ).
 
 organization_name(_, Seed0, OName0) :-
-  _{organization: Org} :< Seed0,
-  (   _{name: OName0} :< Org
+  (   _{name: OName0} :< Seed0.organization
   ->  true
-  ;   _{url: Url} :< Org
+  ;   _{url: Url} :< Seed0.organization
   ->  uri_host(Url, OName0)
   ), !.
 organization_name(Url, _, OName0) :-
@@ -130,7 +129,7 @@ bnode_prefix_(Segments, BNodePrefix) :-
   uri_comps(BNodePrefix, uri(Scheme,Auth,['.well-known',genid|Segments],_,_)).
 
 seed_license(Seed0, Dict1, Dict2) :-
-  _{license: License0} :< Seed0,
+  _{license: License0} :< Seed0.dataset,
   (   triply_license(License0, License)
   ->  Dict2 = Dict1.put(_{license: License})
   ;   debug(ll, "No license for ~w", [Seed0]),

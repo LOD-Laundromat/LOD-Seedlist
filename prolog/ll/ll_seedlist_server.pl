@@ -310,7 +310,7 @@ html_seed(Seed) -->
       organization: Org,
       scrape: Scrape
     } :< Seed,
-    _{hash: Hash, name: DName} :< Dataset,
+    _{name: DName} :< Dataset,
     _{name: OName} :< Org
   },
   html([
@@ -352,7 +352,7 @@ documents(Docs) -->
   html(
     section([
       h2("Documents"),
-      dd(ul(\html_maplist(html_seed_document, Docs)))
+      dd(ol(\html_maplist(html_seed_document, Docs)))
     ])
   ).
 
@@ -404,15 +404,15 @@ scrape(Scrape) -->
       dd(
         dl([
           dt("Added"),
-          dd(\format_time(Added)),
+          dd(\format_time_(Added)),
           dt("Interval"),
           dd(Interval),
           dt("Last modified"),
-          dd(\format_time(LMod)),
+          dd(\format_time_(LMod)),
           dt("Processed"),
-          dd(\format_time(Processed)),
+          dd(\format_time_(Processed)),
           dt("Staleness time"),
-          dd(\format_time(Staleness))
+          dd(\format_time_(Staleness))
         ])
       )
     ])

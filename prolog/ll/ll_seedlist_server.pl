@@ -194,7 +194,11 @@ seed_processing_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
   ->  rest_parameters(Request, [hash(Hash)]),
       (   rocks_key(seedlist, Hash)
-      ->  with_mutex(seedlist, rocks_merge(seedlist, Hash, _{status: idle})),
+      ->  get_time(Now),
+          with_mutex(
+            seedlist,
+            rocks_merge(seedlist, Hash, _{processed: Now, status: idle})
+          ),
           reply_json_dict(_{}, [])
       ;   reply_json_dict(_{}, [status(404)])
       )

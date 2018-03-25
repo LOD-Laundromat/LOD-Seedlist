@@ -310,76 +310,51 @@ html_seed(Seed) -->
       organization: Org,
       scrape: Scrape
     } :< Seed,
-    % dataset
-    _{name: DName, url: DUrl} :< Dataset,
-    ignore(get_dict(description, Dataset, DDescription)),
-    ignore(get_dict(image, Dataset, DImage)),
-    ignore(get_dict(license, Dataset, License)),
-    % organization
-    _{name: OName} :< Org,
-    ignore(get_dict(image, Org, OImage)),
-    ignore(get_dict(url, Org, OUrl)),
-    % scrape
-    _{
-      added: Added0,
-      interval: Interval,
-      'last-modified': LMod0,
-      processed: Processed0
-    } :< Scrape,
-    Staleness0 is Interval + Processed0,
-    maplist(
-      format_time_,
-      [Added0,LMod0,Processed0,Staleness0],
-      [Added,LMod,Processed,Staleness]
-    )
+    _{hash: Hash, name: DName} :< Dataset,
+    _{name: OName} :< Org
   },
   html([
-    h1([OName,": ",DName]),
-    dl([
-      dt("Dataset"),
+    h1([OName,": ",DName," (",code(Hash),")"]),
+    \dataset(Dataset),
+    \documents(Docs),
+    \organization(Org),
+    \scrape(Scrape)
+  ]).
+
+dataset(Dataset) -->
+  {
+    _{name: Name, url: Url} :< Dataset,
+    ignore(get_dict(description, Dataset, Description)),
+    ignore(get_dict(image, Dataset, Image)),
+    ignore(get_dict(license, Dataset, License))
+  },
+  html(
+    section([
+      h2("Dataset"),
       dd(
         dl([
-          \description(DDescription),
-          \image(DImage),
+          \description(Description),
+          \image(Image),
           \license(License),
-          \name(DName),
-          \url(DUrl)
-        ])
-      ),
-      dt("Documents"),
-      dd(ul(\html_maplist(html_seed_document, Docs))),
-      dt("Hash"),
-      dd(Hash),
-      dt("Organization"),
-      dd(
-        dl([
-          \name(OName),
-          \image(OImage),
-          \url(OUrl)
-        ])
-      ),
-      dt("Scrape"),
-      dd(
-        dl([
-          dt("Added"),
-          dd(Added),
-          dt("Interval"),
-          dd(Interval),
-          dt("Last modified"),
-          dd(LMod),
-          dt("Processed"),
-          dd(Processed),
-          dt("Staleness time"),
-          dd(Staleness)
+          \name(Name),
+          \url(Url)
         ])
       )
     ])
-  ]).
+  ).
 
 description(Description) -->
   {var(Description)}, !.
 description(Description) -->
   html([dt("Description"),dd(Description)]).
+
+documents(Docs) -->
+  html(
+    section([
+      h2("Documents"),
+      dd(ul(\html_maplist(html_seed_document, Docs)))
+    ])
+  ).
 
 image(Image) -->
   {var(Image)}, !.
@@ -394,13 +369,63 @@ license(License) -->
 name(Name) -->
   html([dt("Name"),dd(Name)]).
 
+organization(Org) -->
+  {
+    _{name: Name} :< Org,
+    ignore(get_dict(image, Org, Image)),
+    ignore(get_dict(url, Org, Url))
+  },
+  html(
+    section([
+      h2("Organization"),
+      dd(
+        dl([
+          \name(Name),
+          \image(Image),
+          \url(Url)
+        ])
+      )
+    ])
+  ).
+
+scrape(Scrape) -->
+  {
+    _{
+      added: Added,
+      interval: Interval,
+      'last-modified': LMod,
+      processed: Processed
+    } :< Scrape,
+    Staleness is Interval + Processed
+  },
+  html(
+    section([
+      h2("Scrape"),
+      dd(
+        dl([
+          dt("Added"),
+          dd(\format_time(Added)),
+          dt("Interval"),
+          dd(Interval),
+          dt("Last modified"),
+          dd(\format_time(LMod)),
+          dt("Processed"),
+          dd(\format_time(Processed)),
+          dt("Staleness time"),
+          dd(\format_time(Staleness))
+        ])
+      )
+    ])
+  ).
+
 url(Url) -->
   {var(Url)}, !.
 url(Url) -->
   html([dt("URL"),dd(a(href=Url, code(Url)))]).
 
-format_time_(N, Str) :-
-  format_time(string(Str), "%FT%T%:z", N).
+format_time_(N) -->
+  {format_time(string(Str), "%FT%T%:z", N)},
+  html(Str).
 
 html_seed_document(Doc) -->
   html(li(a(href=Doc, Doc))).

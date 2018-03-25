@@ -20,6 +20,7 @@ Seed keys:
     * name(atom)
     * url(atom)
   * documents(list(atom))
+  * hash(atom)
   * organization(dict)
     * name(atom)
     * image(atom)
@@ -27,6 +28,7 @@ Seed keys:
   * scrape
     * added(float)
     * interval(float)
+    * last-modified(float)
     * processed(float)
   * status(oneof([idle,processing]))
 

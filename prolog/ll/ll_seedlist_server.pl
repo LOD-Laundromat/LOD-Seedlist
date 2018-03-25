@@ -307,33 +307,92 @@ html_seed(Seed) -->
       documents: Docs,
       hash: Hash,
       organization: Org,
-      scrape: Scrape,
-      status: Status
+      scrape: Scrape
     } :< Seed,
-    _{name: Name, url: Url} :< Dataset,
-    _{name: OrgName} :< Org,
-    _{added: Added, interval: Interval, processed: Processed} :< Scrape,
+    % dataset
+    _{name: DName, url: DUrl} :< Dataset,
+    ignore(get_dict(description, Dataset, DDescription)),
+    ignore(get_dict(image, Dataset, DImage)),
+    ignore(get_dict(license, Dataset, License)),
+    % organization
+    _{name: OName} :< Org,
+    ignore(get_dict(image, Org, OImage)),
+    ignore(get_dict(url, Org, OUrl)),
+    % scrape
+    _{
+      added: Added,
+      interval: Interval,
+      'last-modified': LMod,
+      processed: Processed
+    } :< Scrape,
     format_time(string(AddedStr), "%FT%T%:z", Added),
+    format_time(string(ProcessedStr), "%FT%T%:z", Processed),
     Staleness is Interval + Processed,
     format_time(string(StalenessStr), "%FT%T%:z", Staleness)
   },
   html([
-    h1([OrgName,": ",Name]),
+    h1([OName,": ",DName]),
     dl([
-      dt("Staleness time"),
-      dd(StalenessStr),
-      dt("URL"),
-      dd(a(href=Url, Url)),
-      dt("Added"),
-      dd(AddedStr),
-      dt("Status"),
-      dd(Status),
+      dt("Dataset"),
+      dd(
+        dl([
+          \description(DDescription),
+          \image(DImage),
+          \license(License),
+          \name(DName),
+          \url(DUrl)
+        ])
+      ),
       dt("Documents"),
       dd(ul(\html_maplist(html_seed_document, Docs))),
       dt("Hash"),
-      dd(Hash)
+      dd(Hash),
+      dt("Organization"),
+      dd(
+        dl([
+          \name(OName),
+          \image(OImage),
+          \url(OUrl)
+        ])
+      ),
+      dt("Scrape"),
+      dd(
+        dl([
+          dt("Added"),
+          dd(AddedStr),
+          dt("Interval"),
+          dd(Interval),
+          dt("Last modified"),
+          dd(LMod),
+          dt("Processed"),
+          dd(ProcessedStr),
+          dt("Staleness time"),
+          dd(StalenessStr)
+        ])
+      )
     ])
   ]).
+
+description(Description) -->
+  {var(Description)}, !.
+description(Description) -->
+  html([dt("Description"),dd(Description)]).
+
+image(Image) -->
+  {var(Image)}, !.
+image(Image) -->
+  html([dt("Image"),dd(Image)]).
+
+license(License) -->
+  {var(License)}, !.
+license(License) -->
+  html([dt("License"),dd(License)]).
+
+name(Name) -->
+  html([dt("Name"),dd(Name)]).
+
+url(Url) -->
+  html([dt("URL"),dd(a(href=Url, code(Url)))]).
 
 html_seed_document(Doc) -->
   html(li(a(href=Doc, Doc))).

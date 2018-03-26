@@ -14,16 +14,16 @@ Seed keys:
 
   * dataset(dict)
     * description(string)
-    * image(atom)
-    * license(atom)
+    * image(uri)
+    * license(uri)
     * name(atom)
-    * url(atom)
-  * documents(list(atom))
+    * url(uri)
+  * documents(list(uri))
   * hash(atom)
   * organization(dict)
     * name(atom)
-    * image(atom)
-    * url(atom)
+    * image(uri)
+    * url(uri)
   * processing(boolean)
   * scrape
     * added(float)
@@ -79,8 +79,8 @@ assert_seed(Seed0) :-
   % interval
   Interval is Now - Seed0.'last-modified',
   organization_name(Url, Seed0, OName0),
-  % Normalize names for Triply Cloud.
-  maplist(triply_name, [OName0,DName0], [OName,DName]),
+  % Normalize names.
+  maplist(normalize_name, [OName0,DName0], [OName,DName]),
   % hash
   md5(OName-DName, Hash),
   (   % The URL has already been added to the seedlist.
@@ -125,12 +125,9 @@ bnode_prefix_(Segments, BNodePrefix) :-
   setting(rdf_term:bnode_prefix_authority, Auth),
   uri_comps(BNodePrefix, uri(Scheme,Auth,['.well-known',genid|Segments],_,_)).
 
-seed_license(Seed0, Dict1, Dict2) :-
-  _{license: License0} :< Seed0.dataset,
-  (   triply_license(License0, License)
-  ->  Dict2 = Dict1.put(_{license: License})
-  ;   Dict2 = Dict1
-  ).
+seed_license(Seed, Dict1, Dict2) :-
+  get_dict(license, Seed, License), !,
+  Dict2 = Dict1.put(_{license: License}).
 seed_license(_, Dict, Dict).
 
 
@@ -170,43 +167,6 @@ seed_by_status(Status, Hash, Seed) :-
 
 % HELPERS %
 
-%! triply_license(+Url:atom, -Label:string) is nondet.
-%
-% http://portal.opendata.dk/dataset/open-data-dk-licens
-% http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/
-% https://creativecommons.org/licenses/by/3.0/at/deed.de
-
-triply_license(Url, Label) :-
-  license_(Prefix, Label),
-  atom_prefix(Url, Prefix), !.
-
-% non-mapped
-license_('').
-license_('http://data.surrey.ca/pages/open-government-licence-surrey').
-license_('http://www.data.gouv.fr/license-Ouverte-Open-license').
-license_('http://www.nationalarchives.gov.uk/doc/non-commercial-government-licence/').
-license_('http://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/').
-license_('https://www.agesic.gub.uy/innovaportal/file/6327/1/licencia-de-datos-abiertos.pdf').
-
-% mapped
-license_('http://creativecommons.org/licenses/by-nc/', "CC-BY-NC").
-license_('http://creativecommons.org/licenses/by-sa/', "CC-BY-SA").
-license_('http://creativecommons.org/licenses/by/', "CC-BY").
-license_('http://creativecommons.org/publicdomain/zero/1.0', "CC0").
-license_('http://reference.data.gov.uk/id/open-government-licence', "OGL").
-license_('http://www.opendefinition.org/licenses/cc-by', "CC-BY").
-license_('http://www.opendefinition.org/licenses/cc-by-sa', "CC-BY-SA").
-license_('http://www.opendefinition.org/licenses/cc-zero', "CC0").
-license_('http://www.opendefinition.org/licenses/gfdl', "GFDL").
-license_('http://www.opendefinition.org/licenses/odc-by', "ODC-BY").
-license_('http://www.opendefinition.org/licenses/odc-odbl', "ODC-ODBL").
-license_('http://www.opendefinition.org/licenses/odc-pddl', "ODC-PDDL").
-license_('https://creativecommons.org/licenses/by-sa/3.0/', "CC-BY-SA").
-license_('https://creativecommons.org/licenses/by/', "CC-BY").
-license_('https://creativecommons.org/publicdomain/zero/1.0', "CC0").
-
-
-
 %! uri_host(+Uri:atom, -Host:atom) is det.
 
 uri_host(Uri, Host) :-
@@ -217,23 +177,23 @@ uri_host(Uri, Host) :-
 
 
 
-%! triply_name(+Name:atom, -TriplyName:atom) is det.
+%! normalize_name(+Name:atom, -NormalizedName:atom) is det.
 %
-% Triply names can only contain alpha-numeric characters and hyphens.
+% Normalized names only contain alpha-numeric characters and hyphens.
 
-triply_name(Name1, Name3) :-
-  atom_phrase(triply_name_, Name1, Name2),
+normalize_name(Name1, Name3) :-
+  atom_phrase(normalize_name_, Name1, Name2),
   atom_length(Name2, Length),
   (Length =< 40 -> Name3 = Name2 ; sub_atom(Name2, 0, 40, _, Name3)).
 
-triply_name_, [Code] -->
+normalize_name_, [Code] -->
   [Code],
   {code_type(Code, alnum)}, !,
-  triply_name_.
-triply_name_, "-" -->
+  normalize_name_.
+normalize_name_, "-" -->
   [_], !,
-  triply_name_.
-triply_name_--> "".
+  normalize_name_.
+normalize_name_--> "".
 
 
 

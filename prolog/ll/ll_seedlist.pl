@@ -8,27 +8,25 @@
   ]
 ).
 
-/** <module> LOD Laundromat: Seedlist
-
-Seed keys:
+/** <module> LOD Laundromat seedlist
 
   * dataset(dict)
     * description(string)
     * image(uri)
+    * 'last-modified'(float) REQUIRED
     * license(uri)
-    * name(atom)
+    * name(atom) REQUIRED NORMALIZED
     * url(uri)
-  * documents(list(uri))
-  * hash(atom)
+  * documents(list(uri)) REQUIRED
+  * hash(atom) GENERATED
   * organization(dict)
-    * name(atom)
+    * name(atom) NORMALIZED
     * image(uri)
     * url(uri)
-  * processing(boolean)
-  * scrape
+  * processing(boolean) GENERATED
+  * scrape GENERATED
     * added(float)
     * interval(float)
-    * last-modified(float)
     * processed(float)
 
 ---
@@ -74,61 +72,58 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 %! assert_seed(+Seed:dict) is det.
 
 assert_seed(Seed0) :-
-  _{name: DName0, url: Url} :< Seed0.dataset,
-  get_time(Now),
-  % interval
-  Interval is Now - Seed0.'last-modified',
-  organization_name(Url, Seed0, OName0),
-  % Normalize names.
-  maplist(normalize_name, [OName0,DName0], [OName,DName]),
+  dataset_name(Seed0, DName),
+  organization_name(Seed0, OName),
   % hash
   md5(OName-DName, Hash),
   (   % The URL has already been added to the seedlist.
       rocks_key(seedlist, Hash)
   ->  existence_error(seed, Hash)
-  ;   % prefixes
-      bnode_prefix_([OName,DName], BNodePrefix),
-      Dataset1 = _{
-        name: DName,
-        prefixes: [_{iri: BNodePrefix, prefixLabel: bnode}],
-        url: Url
-      },
-      % license
-      seed_license(Seed0.dataset, Dataset1, Dataset2),
+  ;   seed_dataset(Seed0.dataset, DName, Dataset),
+      seed_organization(Seed0, OName, Org),
+      seed_scrape(Seed0, Scrape),
       Seed = _{
-        dataset: Dataset2,
+        dataset: Dataset,
         documents: Seed0.documents,
         hash: Hash,
-        organization: _{name: OName},
+        organization: Org,
         processing: false,
-        scrape: _{
-          added: Now,
-          interval: Interval,
-          'last-modified': Seed0.'last-modified',
-          processed: 0.0
-        }
+        scrape: Scrape
       },
       rocks_put(seedlist, Hash, Seed)
   ).
 
-organization_name(_, Seed0, OName0) :-
-  (   _{name: OName0} :< Seed0.organization
-  ->  true
-  ;   _{url: Url} :< Seed0.organization
-  ->  uri_host(Url, OName0)
+%! dataset_name(+Seed:dict, -Name:atom) is det.
+dataset_name(Seed, Name) :-
+  _{name: Name0} :< Seed.dataset,
+  normalize_name(Name0, Name).
+
+%! organization_name(+Seed:dict, -Name:atom) is det.
+organization_name(Seed, Name) :-
+  (   _{name: Name0} :< Seed.organization
+  ->  normalize_name(Name0, Name)
+  ;   _{url: Url} :< Seed.organization
+  ->  uri_host(Url, Name)
   ), !.
-organization_name(Url, _, OName0) :-
-  uri_host(Url, OName0).
+organization_name(Seed, Name) :-
+  _{url: Url} :< Seed,
+  uri_host(Url, Name).
+organization_name(_, noname).
 
-bnode_prefix_(Segments, BNodePrefix) :-
-  setting(rdf_term:bnode_prefix_scheme, Scheme),
-  setting(rdf_term:bnode_prefix_authority, Auth),
-  uri_comps(BNodePrefix, uri(Scheme,Auth,['.well-known',genid|Segments],_,_)).
+%! seed_dataset(+Seed:dict, +Name:atom, -Dataset:dict) is det.
+seed_dataset(Dataset1, Name, Dataset2) :-
+  Dataset2 = Dataset1.put(_{name: Name}).
 
-seed_license(Dataset, Dict1, Dict2) :-
-  get_dict(license, Dataset, License), !,
-  Dict2 = Dict1.put(_{license: License}).
-seed_license(_, Dict, Dict).
+%! seed_organization(+Seed:dict, +Name:atom, -Organization:dict) is det.
+seed_organization(Seed, Name, Org2) :-
+  (get_dict(organization, Seed, Org1) -> true ; Org1 = _{}),
+  Org2 = Org1.put(_{name: Name}).
+
+%! seed_scrape(+Seed:dict, -Scrape:dict) is det.
+seed_scrape(Seed, Scrape) :-
+  get_time(Now),
+  Interval is Now - Seed.dataset.'last-modified',
+  Scrape = _{added: Now, interval: Interval, processed: 0.0}.
 
 
 

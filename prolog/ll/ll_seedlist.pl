@@ -94,7 +94,7 @@ assert_seed(Seed0) :-
         url: Url
       },
       % license
-      seed_license(Seed0, Dataset1, Dataset2),
+      seed_license(Seed0.dataset, Dataset1, Dataset2),
       Seed = _{
         dataset: Dataset2,
         documents: Seed0.documents,
@@ -125,8 +125,8 @@ bnode_prefix_(Segments, BNodePrefix) :-
   setting(rdf_term:bnode_prefix_authority, Auth),
   uri_comps(BNodePrefix, uri(Scheme,Auth,['.well-known',genid|Segments],_,_)).
 
-seed_license(Seed, Dict1, Dict2) :-
-  get_dict(license, Seed, License), !,
+seed_license(Dataset, Dict1, Dict2) :-
+  get_dict(license, Dataset, License), !,
   Dict2 = Dict1.put(_{license: License}).
 seed_license(_, Dict, Dict).
 

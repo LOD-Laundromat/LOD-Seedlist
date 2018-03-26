@@ -175,7 +175,29 @@ seed_idle_handler(Request) :-
 seed_idle_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
   seed_by_status_method(idle, Request, MediaTypes).
+% /seed/idle: PATCH
+seed_idle_method(Request, path, MediaTypes) :-
+  rest_media_type(MediaTypes, seed_idle_media_type(Request)).
 
+% /seed/idle: PATCH: application/json
+seed_idle_media_type(Request, media(application/json,_)) :-
+  (   auth_(Request)
+  ->  rest_parameters(Request, [hash(Hash)]),
+      (   rocks_key(seedlist, Hash)
+      ->  with_mutex(seedlist, (
+            rocks(seedlist, Hash, Seed),
+            _{'last-modified': LMod} :< Seed.dataset,
+            rocks_merge(
+              seedlist,
+              Hash,
+              _{processing: false, scrape: _{processed: LMod}}
+            )
+          )),
+          reply_json_dict(_{}, [])
+      ;   reply_json_dict(_{}, [status(404)])
+      )
+  ;   reply_json_dict(_{}, [status(403)])
+  ).
 
 % /seed/processing
 seed_processing_handler(Request) :-

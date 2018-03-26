@@ -43,7 +43,7 @@
                 [id(seed),methods([delete,get,head,options,post])]).
 :- http_handler(root(seed/idle),
                 seed_idle_handler,
-                [id(seed_idle),methods([get,head,options])]).
+                [id(seed_idle),methods([get,head,options,patch])]).
 :- http_handler(root(seed/processing),
                 seed_processing_handler,
                 [id(seed_processing),methods([get,head,options,patch])]).
@@ -176,7 +176,7 @@ seed_idle_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
   seed_by_status_method(idle, Request, MediaTypes).
 % /seed/idle: PATCH
-seed_idle_method(Request, path, MediaTypes) :-
+seed_idle_method(Request, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_idle_media_type(Request)).
 
 % /seed/idle: PATCH: application/json

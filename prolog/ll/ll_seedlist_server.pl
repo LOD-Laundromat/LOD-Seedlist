@@ -319,6 +319,7 @@ html_seed(Seed) -->
       documents: Docs,
       hash: Hash,
       organization: Org,
+      processing: Processing,
       scrape: Scrape
     } :< Seed,
     _{name: DName} :< Dataset,
@@ -329,12 +330,13 @@ html_seed(Seed) -->
     \dataset(Dataset),
     \documents(Docs),
     \organization(Org),
+    \processing(Processing),
     \scrape(Scrape)
   ]).
 
 dataset(Dataset) -->
   {
-    _{name: Name, url: Url} :< Dataset,
+    _{'last-modified': LMod, name: Name, url: Url} :< Dataset,
     ignore(get_dict(description, Dataset, Description)),
     ignore(get_dict(image, Dataset, Image)),
     ignore(get_dict(license, Dataset, License))
@@ -346,6 +348,7 @@ dataset(Dataset) -->
         dl([
           \description(Description),
           \image(Image),
+          \last_modified(LMod),
           \license(License),
           \name(Name),
           \url(Url)
@@ -371,6 +374,9 @@ image(Image) -->
   {var(Image)}, !.
 image(Image) -->
   html([dt("Image"),dd(Image)]).
+
+last_modified(LMod) -->
+  html([dt("Last modified"),dd(\format_time_(LMod))]).
 
 license(License) -->
   {var(License)}, !.
@@ -399,14 +405,12 @@ organization(Org) -->
     ])
   ).
 
+processing(Processing) -->
+  html([dt("Processing"),dd(\html_boolean(Processing))]).
+
 scrape(Scrape) -->
   {
-    _{
-      added: Added,
-      interval: Interval,
-      'last-modified': LMod,
-      processed: Processed
-    } :< Scrape,
+    _{added: Added, interval: Interval, processed: Processed} :< Scrape,
     Staleness is Interval + Processed
   },
   html(
@@ -418,8 +422,6 @@ scrape(Scrape) -->
           dd(\format_time_(Added)),
           dt("Interval"),
           dd(Interval),
-          dt("Last modified"),
-          dd(\format_time_(LMod)),
           dt("Processed"),
           dd(\format_time_(Processed)),
           dt("Staleness time"),

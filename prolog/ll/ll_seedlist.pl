@@ -101,7 +101,7 @@ organization_name(Seed, Name) :-
   (   _{name: Name0} :< Org
   ->  true
   ;   _{url: Url} :< Org
-  ->  uri_host(Url, Name0),
+  ->  uri_host(Url, Name0)
   ), !,
   normalize_name(Name0, Name).
 organization_name(Seed, Name) :-

@@ -99,13 +99,15 @@ assert_seed(Seed1) :-
 organization_name(Seed, Name) :-
   get_dict(organization, Seed, Org),
   (   _{name: Name0} :< Org
-  ->  normalize_name(Name0, Name)
+  ->  true
   ;   _{url: Url} :< Org
-  ->  uri_host(Url, Name)
-  ), !.
+  ->  uri_host(Url, Name0),
+  ), !,
+  normalize_name(Name0, Name).
 organization_name(Seed, Name) :-
   _{url: Url} :< Seed,
-  uri_host(Url, Name), !.
+  uri_host(Url, Name0), !,
+  normalize_name(Name0, Name).
 organization_name(_, noname).
 
 %! seed_dataset(+Seed:dict, +Name:atom, -Dataset:dict) is det.

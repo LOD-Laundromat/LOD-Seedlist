@@ -323,45 +323,31 @@ html_seed_table(Seeds) -->
   html(ul(\html_maplist(html_seed_row, Seeds))).
 
 html_seed_row(Seed) -->
-  {
-    _{dataset: Dataset, hash: Hash, organization: Org} :< Seed,
-    _{name: DName, url: Url} :< Dataset,
-    _{name: OName} :< Org,
-    http_link_to_id(seed, [hash(Hash)], Uri)
-  }, !,
-  html(li(a(href=Uri, [OName,"/",DName," ",\external_link(Url)]))).
+  {http_link_to_id(seed, [hash(Seed.hash)], Uri)}, !,
+  html(li(a(href=Uri, [Seed.organization.name,"/",Seed.dataset.name]))).
 html_seed_row(Seed) -->
-  {_{hash: Hash} :< Seed},
-  html(li(code(Hash))).
+  html(li(code(Seed.hash))).
 
 html_seed(Seed) -->
-  {
-    _{
-      dataset: Dataset,
-      documents: Docs,
-      hash: Hash,
-      organization: Org,
-      processing: Processing,
-      scrape: Scrape
-    } :< Seed,
-    _{name: DName} :< Dataset,
-    _{name: OName} :< Org
-  },
   html([
-    h1([OName,": ",DName," (",code(Hash),")"]),
-    \dataset(Dataset),
-    \documents(Docs),
-    \organization(Org),
-    \processing(Processing),
-    \scrape(Scrape)
+    \header(Seed),
+    \approach(Seed.approach),
+    \dataset(Seed.dataset),
+    \documents(Seed.documents),
+    \organization(Seed.organization),
+    \processing(Seed.processing),
+    \scrape(Seed.scrape)
   ]).
+
+approach(Approach) -->
+  html([h2("Approach"),p(code(Approach))]).
 
 dataset(Dataset) -->
   {
-    _{'last-modified': LMod, name: Name, url: Url} :< Dataset,
     ignore(get_dict(description, Dataset, Description)),
     ignore(get_dict(image, Dataset, Image)),
-    ignore(get_dict(license, Dataset, License))
+    ignore(get_dict(license, Dataset, License)),
+    ignore(get_dict(url, Dataset, Url))
   },
   html(
     section([
@@ -370,9 +356,9 @@ dataset(Dataset) -->
         dl([
           \description(Description),
           \image(Image),
-          \last_modified(LMod),
+          \last_modified(Dataset.'last-modified'),
           \license(License),
-          \name(Name),
+          \name(Dataset.name),
           \url(Url)
         ])
       )
@@ -392,10 +378,22 @@ documents(Docs) -->
     ])
   ).
 
+header(Seed) -->
+  html(
+    h1([
+      Seed.organization.name,
+      "/",
+      Seed.dataset.name,
+      " (",
+      code(Seed.hash),
+      ")"
+    ])
+  ).
+
 image(Image) -->
   {var(Image)}, !.
 image(Image) -->
-  html([dt("Image"),dd(Image)]).
+  html([dt("Image"),dd(a(href=Image,img(src=Image,[])))]).
 
 last_modified(LMod) -->
   html([dt("Last modified"),dd(\format_time_(LMod))]).
@@ -403,14 +401,13 @@ last_modified(LMod) -->
 license(License) -->
   {var(License)}, !.
 license(License) -->
-  html([dt("License"),dd(License)]).
+  html([dt("License"),dd(a(href=License,code(License)))]).
 
 name(Name) -->
-  html([dt("Name"),dd(Name)]).
+  html([dt("Name"),dd(code(Name))]).
 
 organization(Org) -->
   {
-    _{name: Name} :< Org,
     ignore(get_dict(image, Org, Image)),
     ignore(get_dict(url, Org, Url))
   },
@@ -419,7 +416,7 @@ organization(Org) -->
       h2("Organization"),
       dd(
         dl([
-          \name(Name),
+          \name(Org.name),
           \image(Image),
           \url(Url)
         ])
@@ -428,7 +425,7 @@ organization(Org) -->
   ).
 
 processing(Processing) -->
-  html([dt("Processing"),dd(\html_boolean(Processing))]).
+  html([h2("Processing"),p(\html_boolean(Processing))]).
 
 scrape(Scrape) -->
   {

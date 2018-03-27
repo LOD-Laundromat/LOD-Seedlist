@@ -10,6 +10,7 @@
 
 /** <module> LOD Laundromat seedlist
 
+  * approach(atom) REQUIRED
   * dataset(dict)
     * description(string)
     * image(uri)
@@ -19,7 +20,7 @@
     * url(uri)
   * documents(list(uri)) REQUIRED
   * hash(atom) GENERATED
-  * organization(dict)
+  * organization(dict) GENERATED
     * name(atom) NORMALIZED
     * image(uri)
     * url(uri)
@@ -71,26 +72,27 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 
 %! assert_seed(+Seed:dict) is det.
 
-assert_seed(Seed0) :-
-  dataset_name(Seed0, DName),
-  organization_name(Seed0, OName),
+assert_seed(Seed1) :-
+  dataset_name(Seed1, DName),
+  organization_name(Seed1, OName),
   % hash
   md5(OName-DName, Hash),
   (   % The URL has already been added to the seedlist.
       rocks_key(seedlist, Hash)
   ->  existence_error(seed, Hash)
-  ;   seed_dataset(Seed0.dataset, DName, Dataset),
-      seed_organization(Seed0, OName, Org),
-      seed_scrape(Seed0, Scrape),
-      Seed = _{
+  ;   seed_dataset(Seed1.dataset, DName, Dataset),
+      seed_organization(Seed1, OName, Org),
+      seed_scrape(Seed1, Scrape),
+      Seed2 = _{
+        approach: Seed1.approach,
         dataset: Dataset,
-        documents: Seed0.documents,
+        documents: Seed1.documents,
         hash: Hash,
         organization: Org,
         processing: false,
         scrape: Scrape
       },
-      rocks_put(seedlist, Hash, Seed)
+      rocks_put(seedlist, Hash, Seed2)
   ).
 
 %! dataset_name(+Seed:dict, -Name:atom) is det.

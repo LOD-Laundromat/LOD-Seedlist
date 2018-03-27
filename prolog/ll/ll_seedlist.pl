@@ -73,7 +73,7 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 %! assert_seed(+Seed:dict) is det.
 
 assert_seed(Seed1) :-
-  dataset_name(Seed1, DName),
+  normalize_name(Seed1.dataset.name, DName),
   organization_name(Seed1, OName),
   % hash
   md5(OName-DName, Hash),
@@ -95,21 +95,17 @@ assert_seed(Seed1) :-
       rocks_put(seedlist, Hash, Seed2)
   ).
 
-%! dataset_name(+Seed:dict, -Name:atom) is det.
-dataset_name(Seed, Name) :-
-  _{name: Name0} :< Seed.dataset,
-  normalize_name(Name0, Name).
-
 %! organization_name(+Seed:dict, -Name:atom) is det.
 organization_name(Seed, Name) :-
-  (   _{name: Name0} :< Seed.organization
+  get_dict(organization, Seed, Org),
+  (   _{name: Name0} :< Org
   ->  normalize_name(Name0, Name)
-  ;   _{url: Url} :< Seed.organization
+  ;   _{url: Url} :< Org
   ->  uri_host(Url, Name)
   ), !.
 organization_name(Seed, Name) :-
   _{url: Url} :< Seed,
-  uri_host(Url, Name).
+  uri_host(Url, Name), !.
 organization_name(_, noname).
 
 %! seed_dataset(+Seed:dict, +Name:atom, -Dataset:dict) is det.

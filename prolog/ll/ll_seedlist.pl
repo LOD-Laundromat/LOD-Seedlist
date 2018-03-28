@@ -181,9 +181,10 @@ normalize_name(Name1, Name4) :-
   atom_length(Name2, Length),
   (   Length =< 40
   ->  Name4 = Name2
-  ;   sub_atom(Name2, 0, 38, _, Name3),
+  ;   sub_atom(Name2, 0, 37, _, Name3),
       flag(Name3, N, N+1),
-      atomic_list_concat([Name3,-,N], Name4)
+      format(atom(Postfix), "~|~`0t~d~2+", [N]),
+      atomic_list_concat([Name3,-,Postfix], Name4)
   ).
 
 normalize_name_, [Code] -->

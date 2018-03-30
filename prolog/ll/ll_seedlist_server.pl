@@ -9,9 +9,16 @@
 :- use_module(library(aggregate)).
 :- use_module(library(apply)).
 :- use_module(library(http/http_authenticate)).
+:- use_module(library(http/http_client)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_path)).
+:- use_module(library(memfile)).
+:- use_module(library(semweb/rdf_db), [
+     rdf_load/2,
+     rdf_transaction/3
+   ]).
+:- use_module(library(semweb/turtle), []).
 :- use_module(library(settings)).
 :- use_module(library(yall)).
 
@@ -26,6 +33,9 @@
 :- use_module(library(pagination)).
 :- use_module(library(pp)).
 :- use_module(library(rocks_ext)).
+
+:- discontiguous
+    seed_method/3.
 
 :- dynamic
     html:handler_description/2,
@@ -108,9 +118,29 @@ home_get_media_type(media(text/html,_)) :-
 seed_handler(Request) :-
   rest_method(Request, seed_method(Request)).
 
+
+
 % /seed: DELETE
 seed_method(Request, delete, MediaTypes) :-
   rest_media_type(MediaTypes, seed_delete_media_type(Request)).
+
+% /seed: DELETE: application/json
+seed_delete_media_type(Request, media(application/json,_)) :-
+  (   auth_(Request)
+  ->  rest_parameters(Request, [hash(Hash)]),
+      with_mutex(seedlist,
+        (   rocks_key(seedlist, Hash)
+        ->  rocks_delete(seedlist, Hash),
+            Status = 200
+        ;   Status = 404
+        )
+      ),
+      reply_json_dict(_{}, [status(Status)])
+  ;   reply_json_dict(_{}, [status(403)])
+  ).
+
+
+
 % /seed: GET
 seed_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
@@ -135,37 +165,75 @@ seed_method(Request, Method, MediaTypes) :-
   ;   format(string(Msg), "Hash ‘~a’ does not exist.", [Hash]),
       rest_media_type(MediaTypes, existence_error_media_type(Hash, Msg))
   ).
+
+%! list_seeds_media_type(?Status:oneof([idle,processing,stale]), +Page:dict,
+%!                       +MediaType:compound) is det.
+%
+% /seed: GET,HEAD: application/json, text/html
+
+list_seeds_media_type(_, Page, media(application/json,_)) :-
+  http_pagination_json(Page).
+list_seeds_media_type(Status, Page, media(text/html,_)) :-
+  (var(Status) -> T = [] ; atom_capitalize(Status, Label), T = [Label]),
+  html_page(
+    page(Page,["Seed"|T]),
+    [],
+    [\html_pagination_result(Page, html_seed_table)]
+  ).
+
+%! seed_media_type(+Seed:dict, +MediaType:compound) is det.
+
+% /seed/$(HASH): GET, HEAD: application/json, text/html
+seed_media_type(Seed, media(application/json,_)) :-
+  reply_json_dict(Seed).
+seed_media_type(Seed, media(text/html,_)) :-
+  _{hash: Hash} :< Seed,
+  atom_string(Hash, Subtitle),
+  html_page(page(_,[Subtitle]), [], [\html_seed(Seed)]).
+
+%! existence_error_media_type(+Hash:atom, +MediaType:compound) is det.
+%
+% /seed/$(HASH): application/json, text/html
+
+existence_error_media_type(Hash, Msg, media(application/json,_)) :-
+  reply_json_dict(_{hash: Hash, message: Msg}, [status(404)]).
+existence_error_media_type(Hash, Msg, media(test/html,_)) :-
+  html_page(
+    page(_,["Seed",Hash]),
+    [],
+    [h1("Existence error"),p(Msg)]
+  ).
+
+
+
 % /seed: POST
 seed_method(Request, post, MediaTypes) :-
   rest_media_type(MediaTypes, seed_post_media_type(Request)).
 
-% /seed: DELETE: application/json
-seed_delete_media_type(Request, media(application/json,_)) :-
-  (   auth_(Request)
-  ->  rest_parameters(Request, [hash(Hash)]),
-      with_mutex(seedlist,
-        (   rocks_key(seedlist, Hash)
-        ->  rocks_delete(seedlist, Hash),
-            Status = 200
-        ;   Status = 404
-        )
-      ),
-      reply_json_dict(_{}, [status(Status)])
-  ;   reply_json_dict(_{}, [status(403)])
-  ).
-
 % /seed: POST: application/json
 seed_post_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
-  ->  http_read_json_dict(Request, Seed, [value_string_as(atom)]),
-      catch(assert_seed(Seed), E, true),
-      (   var(E)
-      ->  reply_json_dict(_{}, [status(201)])
-      ;   E = error(existence_error(seed,_Hash),_Context)
-      ->  reply_json_dict(_{message: "A seed with the same hash already exists."})
-      )
-  ;   reply_json_dict(_{}, [status(403)])
-  ).
+  ->  new_memory_file(File),
+      setup_call_cleanup(
+        open_memory_file(File, write, Out),
+        http_read_data(Request, _, [to(stream(Out))]),
+        close(Out)
+      ),
+      rdf_transaction(assert_seed_(File, E), _, [snapshot(true)]),
+      (var(E) -> Status = 201 ; Status = 400)
+  ;   Status = 403
+  ),
+  reply_json_dict(_{}, [status(Status)]).
+
+assert_seed_(File, E) :-
+  setup_call_cleanup(
+    open_memory_file(File, read, In),
+    rdf_load(In, [format(turtle)]),
+    close(In)
+  ),
+  catch(assert_seeds, E, true).
+
+
 
 % /seed/idle
 seed_idle_handler(Request) :-
@@ -180,24 +248,26 @@ seed_idle_method(Request, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_idle_media_type(Request)).
 
 % /seed/idle: PATCH: application/json
+%
+% Reset the seed to its original state.
 seed_idle_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
   ->  rest_parameters(Request, [hash(Hash)]),
       (   rocks_key(seedlist, Hash)
-      ->  with_mutex(seedlist, (
-            rocks(seedlist, Hash, Seed),
-            _{'last-modified': LMod} :< Seed.dataset,
+      ->  with_mutex(seedlist,
             rocks_merge(
               seedlist,
               Hash,
-              _{processing: false, scrape: _{processed: LMod}}
+              _{processing: false, scrape: _{processed: 0.0}}
             )
-          )),
+          ),
           reply_json_dict(_{}, [])
       ;   reply_json_dict(_{}, [status(404)])
       )
   ;   reply_json_dict(_{}, [status(403)])
   ).
+
+
 
 % /seed/processing
 seed_processing_handler(Request) :-
@@ -212,6 +282,8 @@ seed_processing_method(Request, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_processing_media_type(Request)).
 
 % /seed/processing: PATCH: application/json
+%
+% Finish processing the seed.
 seed_processing_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
   ->  rest_parameters(Request, [hash(Hash)]),
@@ -232,6 +304,7 @@ seed_processing_media_type(Request, media(application/json,_)) :-
   ).
 
 
+
 % /seed/stale
 seed_stale_handler(Request) :-
   rest_method(Request, seed_stale_method(Request)).
@@ -245,6 +318,8 @@ seed_stale_method(_, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_stale_media_type).
 
 % /seed/stale: PATCH: application/json
+%
+% Start processing the seed.
 seed_stale_media_type(media(application/json,_)) :-
   (   with_mutex(seedlist, (
         seed_by_status(stale, Hash, Seed),
@@ -268,50 +343,6 @@ seed_by_status_method(Status, Request, MediaTypes) :-
     Page
   ),
   rest_media_type(MediaTypes, list_seeds_media_type(Status, Page)).
-
-
-
-%! existence_error_media_type(+Hash:atom, +MediaType:compound) is det.
-%
-% /seed/$(HASH): application/json, text/html
-
-existence_error_media_type(Hash, Msg, media(application/json,_)) :-
-  reply_json_dict(_{hash: Hash, message: Msg}, [status(404)]).
-existence_error_media_type(Hash, Msg, media(test/html,_)) :-
-  html_page(
-    page(_,["Seed",Hash]),
-    [],
-    [h1("Existence error"),p(Msg)]
-  ).
-
-
-
-%! list_seeds_media_type(?Status:oneof([idle,processing,stale]), +Page:dict,
-%!                       +MediaType:compound) is det.
-%
-% /seed: GET,HEAD: application/json, text/html
-
-list_seeds_media_type(_, Page, media(application/json,_)) :-
-  http_pagination_json(Page).
-list_seeds_media_type(Status, Page, media(text/html,_)) :-
-  (var(Status) -> T = [] ; atom_capitalize(Status, Label), T = [Label]),
-  html_page(
-    page(Page,["Seed"|T]),
-    [],
-    [\html_pagination_result(Page, html_seed_table)]
-  ).
-
-
-
-%! seed_media_type(+Seed:dict, +MediaType:compound) is det.
-
-% /seed/$(HASH): GET, HEAD: application/json, text/html
-seed_media_type(Seed, media(application/json,_)) :-
-  reply_json_dict(Seed).
-seed_media_type(Seed, media(text/html,_)) :-
-  _{hash: Hash} :< Seed,
-  atom_string(Hash, Subtitle),
-  html_page(page(_,[Subtitle]), [], [\html_seed(Seed)]).
 
 
 

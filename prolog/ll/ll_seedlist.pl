@@ -2,6 +2,7 @@
   ll_seedlist,
   [
     assert_seed/1,   % +Seed
+    assert_seeds/0,
     retract_seed/1,  % +Hash
     seed_by_hash/2,  % +Hash, -Seed
     seed_by_status/3 % +Status, -Hash, -Seed
@@ -10,7 +11,6 @@
 
 /** <module> LOD Laundromat seedlist
 
-  * approach(atom) REQUIRED
   * dataset(dict)
     * description(string)
     * image(uri)
@@ -29,6 +29,7 @@
     * added(float)
     * interval(float)
     * processed(float)
+  * source(string) REQUIRED
 
 ---
 
@@ -48,6 +49,8 @@
 :- use_module(library(hash_ext)).
 :- use_module(library(http/http_client2)).
 :- use_module(library(rocks_ext)).
+:- use_module(library(sw/rdf_mem)).
+:- use_module(library(sw/rdf_prefix)).
 :- use_module(library(sw/rdf_term)).
 :- use_module(library(uri_ext)).
 
@@ -60,6 +63,12 @@ merge_dicts(partial, _, New, In, Out) :-
   merge_dicts(New, In, Out).
 merge_dicts(full, _, Initial, Additions, Out) :-
   merge_dicts([Initial|Additions], Out).
+
+:- maplist(rdf_assert_prefix, [
+     dcat-'http://www.w3.org/ns/dcat#',
+     dct-'http://purl.org/dc/terms/',
+     rdfs-'http://www.w3.org/2000/01/rdf-schema#'
+   ]).
 
 :- setting(default_interval, float, 86400.0,
            "The default interval for recrawling.").
@@ -79,18 +88,18 @@ assert_seed(Seed1) :-
   md5(OName-DName, Hash),
   (   % The URL has already been added to the seedlist.
       rocks_key(seedlist, Hash)
-  ->  existence_error(seed, Hash)
+  ->  true
   ;   seed_dataset(Seed1.dataset, DName, Dataset),
       seed_organization(Seed1, OName, Org),
       seed_scrape(Seed1, Scrape),
       Seed2 = _{
-        approach: Seed1.approach,
         dataset: Dataset,
         documents: Seed1.documents,
         hash: Hash,
         organization: Org,
         processing: false,
-        scrape: Scrape
+        scrape: Scrape,
+        source: Seed1.source
       },
       rocks_put(seedlist, Hash, Seed2)
   ).
@@ -124,6 +133,50 @@ seed_scrape(Seed, Scrape) :-
   get_time(Now),
   Interval is Now - Seed.dataset.'last-modified',
   Scrape = _{added: Now, interval: Interval, processed: 0.0}.
+
+
+
+%! assert_seeds is det.
+
+assert_seeds :-
+  forall(
+    rdf_seed_(Seed),
+    assert_seed(Seed)
+  ).
+
+rdf_seed_(Seed2) :-
+  % documents
+  rdf_triple(Dataset, dcat:distribution, Distribution),
+  aggregate_all(
+    set(Doc),
+    (
+      rdf_triple(Distribution, dcat:downloadURL, Doc0),
+      rdf_literal_value(Doc0, Doc)
+    ),
+    Docs
+  ),
+  % names
+  rdf_triple(Dataset, dct:publisher, Org),
+  maplist(index_name_, [Dataset,Org], [DName,OName]),
+  Seed1 = _{
+    dataset: _{
+      'last-modified': 0.0,
+      name: DName
+    },
+    documents: Docs,
+    organization: _{name: OName},
+    source: index
+  },
+  % license
+  (   rdf_triple(Dataset, dct:license, License0)
+  ->  rdf_literal_value(License0, License),
+      Seed2 = Seed1.put(_{license: License})
+  ;   Seed2 = Seed1
+  ).
+
+index_name_(Iri, Name) :-
+  uri_comps(Iri, uri(_,_,Segments,_,_)),
+  last(Segments, Name).
 
 
 

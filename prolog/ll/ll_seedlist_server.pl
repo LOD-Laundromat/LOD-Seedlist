@@ -363,16 +363,13 @@ html_seed_row(Seed) -->
 html_seed(Seed) -->
   html([
     \header(Seed),
-    \approach(Seed.approach),
     \dataset(Seed.dataset),
     \documents(Seed.documents),
     \organization(Seed.organization),
     \processing(Seed.processing),
-    \scrape(Seed.scrape)
+    \scrape(Seed.scrape),
+    \source(Seed.source)
   ]).
-
-approach(Approach) -->
-  html([h2("Approach"),p(code(Approach))]).
 
 dataset(Dataset) -->
   {
@@ -481,6 +478,9 @@ scrape(Scrape) -->
       )
     ])
   ).
+
+source(Source) -->
+  html([h2("Source"),p(code(Source))]).
 
 url(Url) -->
   {var(Url)}, !.

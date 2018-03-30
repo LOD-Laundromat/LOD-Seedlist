@@ -229,10 +229,16 @@ uri_host(Uri, Host) :-
 %
 % Normalized names only contain alpha-numeric characters and hyphens.
 
-normalize_name(Name1, Name3) :-
+normalize_name(Name1, Name4) :-
   atom_phrase(normalize_name_, Name1, Name2),
   atom_length(Name2, Length),
-  (Length =< 40 -> Name3 = Name2 ; sub_atom(Name2, 0, 40, _, Name3)).
+  (   Length =< 40
+  ->  Name4 = Name2
+  ;   sub_atom(Name2, 0, 37, _, Name3),
+      flag(Name3, N, N+1),
+      format(atom(Postfix), "~|~`0t~d~2+", [N]),
+      atomic_list_concat([Name3,-,Postfix], Name4)
+  ).
 
 normalize_name_, [Code] -->
   [Code],

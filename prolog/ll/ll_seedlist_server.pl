@@ -92,6 +92,7 @@ http:media_types(seed_stale_handler, [media(application/json),
 http:param(hash, [atom,description("Hash key of the requested seed.")]).
 
 :- set_setting(http:products, ["LOD-Seedlist"-"v0.0.0"]).
+:- set_setting(pagination:default_page_size, 100).
 
 
 

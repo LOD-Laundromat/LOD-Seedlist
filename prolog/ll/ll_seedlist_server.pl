@@ -23,7 +23,6 @@
 :- use_module(library(yall)).
 
 :- use_module(library(atom_ext)).
-:- use_module(library(hash_ext)).
 :- use_module(library(html/html_doc)).
 :- use_module(library(html/html_ext)).
 :- use_module(library(html/html_pagination)).
@@ -216,20 +215,13 @@ seed_method(Request, post, MediaTypes) :-
 seed_post_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
   ->  (   http_read_json_dict(Request, Dict, [value_string_as(atom)]),
-          get_dict(url, Dict, Uri)
-      ->  md5(Uri, Hash),
-          with_mutex(
-            seedlist,
-            (   rocks_key(seedlist, Hash)
-            ->  reply_json_dict(_{}, [status(200)])
-            ;   assert_seed(Uri, Hash, Seed),
-                reply_json_dict(Seed, [status(201)])
-            )
-          )
-      ;   reply_json_dict(_{}, [status(400)])
+          assert_seeds(Dict)
+      ->  Status = 200
+      ;   Status = 400
       )
-  ;   reply_json_dict(_{}, [status(403)])
-  ).
+  ;   Status = 403
+  ),
+  reply_json_dict(_{}, [status(Status)]).
 
 
 

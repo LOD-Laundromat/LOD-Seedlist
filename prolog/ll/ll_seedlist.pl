@@ -1,7 +1,7 @@
 :- module(
   ll_seedlist,
   [
-    assert_seed/3,   % +Uri, +Hash, -Seed
+    assert_seeds/1,  % +Dict
     retract_seed/1,  % +Hash
     seed_by_hash/2,  % +Hash, -Seed
     seed_by_status/3 % +Status, -Hash, -Seed
@@ -23,6 +23,7 @@
 :- use_module(library(conf_ext)).
 :- use_module(library(dcg)).
 :- use_module(library(dict)).
+:- use_module(library(hash_ext)).
 :- use_module(library(http/http_client2)).
 :- use_module(library(rocks_ext)).
 :- use_module(library(sw/rdf_mem)).
@@ -55,18 +56,26 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 
 
 
-%! assert_seed(+Uri:atom, +Hash:atom, -Seed:dict) is det.
+%! assert_seed(+Url:atom) is det.
 
-assert_seed(Uri, Hash, Seed) :-
-  % Number of seconds in 100 days: (* 100 24 60 60.0)
+assert_seed(Uri) :-
+  md5(Uri, Hash),
   Seed = _{
     hash: Hash,
+    % Number of seconds in 100 days: (* 100 24 60 60.0)
     interval: 8640000.0,
     processed: 0.0,
     processing: false,
     url: Uri
   },
   rocks_put(seedlist, Hash, Seed).
+
+
+
+%! assert_seeds(+Dict:dict) is det.
+
+assert_seeds(Dict) :-
+  maplist(assert_seed, Dict.urls).
 
 
 

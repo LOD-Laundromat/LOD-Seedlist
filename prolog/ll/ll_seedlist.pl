@@ -1,8 +1,7 @@
 :- module(
   ll_seedlist,
   [
-    assert_seed/1,   % +Seed
-    assert_seeds/0,
+    assert_seed/3,   % +Uri, +Hash, -Seed
     retract_seed/1,  % +Hash
     seed_by_hash/2,  % +Hash, -Seed
     seed_by_status/3 % +Status, -Hash, -Seed
@@ -10,28 +9,6 @@
 ).
 
 /** <module> LOD Laundromat seedlist
-
-  * dataset(dict)
-    * description(string)
-    * image(uri)
-    * 'last-modified'(float) REQUIRED
-    * license(uri)
-    * name(atom) REQUIRED NORMALIZED
-    * url(uri)
-  * documents(list(uri)) REQUIRED
-  * hash(atom) GENERATED
-  * organization(dict) GENERATED
-    * name(atom) NORMALIZED
-    * image(uri)
-    * url(uri)
-  * processing(boolean) GENERATED
-  * scrape GENERATED
-    * added(float)
-    * interval(float)
-    * processed(float)
-  * source(string) REQUIRED
-
----
 
 @author Wouter Beek
 @version 2018
@@ -46,7 +23,6 @@
 :- use_module(library(conf_ext)).
 :- use_module(library(dcg)).
 :- use_module(library(dict)).
-:- use_module(library(hash_ext)).
 :- use_module(library(http/http_client2)).
 :- use_module(library(rocks_ext)).
 :- use_module(library(sw/rdf_mem)).
@@ -79,104 +55,18 @@ merge_dicts(full, _, Initial, Additions, Out) :-
 
 
 
-%! assert_seed(+Seed:dict) is det.
+%! assert_seed(+Uri:atom, +Hash:atom, -Seed:dict) is det.
 
-assert_seed(Seed1) :-
-  normalize_name(Seed1.dataset.name, DName),
-  organization_name(Seed1, OName),
-  % hash
-  md5(OName-DName, Hash),
-  (   % The URL has already been added to the seedlist.
-      rocks_key(seedlist, Hash)
-  ->  true
-  ;   seed_dataset(Seed1.dataset, DName, Dataset),
-      seed_organization(Seed1, OName, Org),
-      seed_scrape(Seed1, Scrape),
-      Seed2 = _{
-        dataset: Dataset,
-        documents: Seed1.documents,
-        hash: Hash,
-        organization: Org,
-        processing: false,
-        scrape: Scrape,
-        source: Seed1.source
-      },
-      rocks_put(seedlist, Hash, Seed2)
-  ).
-
-%! organization_name(+Seed:dict, -Name:atom) is det.
-organization_name(Seed, Name) :-
-  get_dict(organization, Seed, Org),
-  (   _{name: Name0} :< Org
-  ->  true
-  ;   _{url: Url} :< Org
-  ->  uri_host(Url, Name0)
-  ), !,
-  normalize_name(Name0, Name).
-organization_name(Seed, Name) :-
-  _{url: Url} :< Seed,
-  uri_host(Url, Name0), !,
-  normalize_name(Name0, Name).
-organization_name(_, noname).
-
-%! seed_dataset(+Seed:dict, +Name:atom, -Dataset:dict) is det.
-seed_dataset(Dataset1, Name, Dataset2) :-
-  Dataset2 = Dataset1.put(_{name: Name}).
-
-%! seed_organization(+Seed:dict, +Name:atom, -Organization:dict) is det.
-seed_organization(Seed, Name, Org2) :-
-  (get_dict(organization, Seed, Org1) -> true ; Org1 = _{}),
-  Org2 = Org1.put(_{name: Name}).
-
-%! seed_scrape(+Seed:dict, -Scrape:dict) is det.
-seed_scrape(Seed, Scrape) :-
-  get_time(Now),
-  Interval is Now - Seed.dataset.'last-modified',
-  Scrape = _{added: Now, interval: Interval, processed: 0.0}.
-
-
-
-%! assert_seeds is det.
-
-assert_seeds :-
-  forall(
-    rdf_seed_(Seed),
-    assert_seed(Seed)
-  ).
-
-rdf_seed_(Seed2) :-
-  % documents
-  rdf_triple(Dataset, dcat:distribution, Distribution),
-  aggregate_all(
-    set(Doc),
-    (
-      rdf_triple(Distribution, dcat:downloadURL, Doc0),
-      rdf_literal_value(Doc0, Doc)
-    ),
-    Docs
-  ),
-  % names
-  rdf_triple(Dataset, dct:publisher, Org),
-  maplist(index_name_, [Dataset,Org], [DName,OName]),
-  Seed1 = _{
-    dataset: _{
-      'last-modified': 0.0,
-      name: DName
-    },
-    documents: Docs,
-    organization: _{name: OName},
-    source: index
+assert_seed(Uri, Hash, Seed) :-
+  % Number of seconds in 100 days: (* 100 24 60 60.0)
+  Seed = _{
+    hash: Hash,
+    interval: 8640000.0,
+    processed: 0.0,
+    processing: false,
+    url: Uri
   },
-  % license
-  (   rdf_triple(Dataset, dct:license, License0)
-  ->  rdf_literal_value(License0, License),
-      Seed2 = Seed1.put(_{license: License})
-  ;   Seed2 = Seed1
-  ).
-
-index_name_(Iri, Name) :-
-  uri_comps(Iri, uri(_,_,Segments,_,_)),
-  last(Segments, Name).
+  rocks_put(seedlist, Hash, Seed).
 
 
 
@@ -195,19 +85,18 @@ seed_by_hash(Hash, Seed) :-
 
 
 
-%! seed_by_status(+Status:oneof([idle,processing,stale]), -Hash:atom,
+%! seed_by_status(+Status:oneof([idle,processing,stale]), ?Hash:atom,
 %!                -Seed:dict) is nondet.
 
-seed_by_status(processing, Hash, Seed) :- !,
-  rocks_value(seedlist, Seed),
-  _{hash: Hash, processing: true} :< Seed.
 seed_by_status(Status, Hash, Seed) :-
-  get_time(Now),
-  rocks_value(seedlist, Seed),
-  _{hash: Hash, processing: false, scrape: Scrape} :< Seed,
-  _{interval: Interval, processed: Processed} :< Scrape,
-  N is Processed + Interval,
-  (Status == idle -> N >= Now ; Status == stale -> N < Now).
+  rocks(seedlist, Hash, Seed),
+  (   Status = processing
+  ->  _{processing: true} :< Seed
+  ;   get_time(Now),
+      _{processing: false, interval: Interval, processed: Processed} :< Seed,
+      N is Processed + Interval,
+      (Status == idle -> N >= Now ; Status == stale -> N < Now)
+  ).
 
 
 
@@ -222,32 +111,6 @@ uri_host(Uri, Host) :-
   uri_data(authority, UriComps, Auth),
   uri_authority_components(Auth, AuthComps),
   uri_authority_data(host, AuthComps, Host).
-
-
-
-%! normalize_name(+Name:atom, -NormalizedName:atom) is det.
-%
-% Normalized names only contain alpha-numeric characters and hyphens.
-
-normalize_name(Name1, Name4) :-
-  atom_phrase(normalize_name_, Name1, Name2),
-  atom_length(Name2, Length),
-  (   Length =< 40
-  ->  Name4 = Name2
-  ;   sub_atom(Name2, 0, 37, _, Name3),
-      flag(Name3, N, N+1),
-      format(atom(Postfix), "~|~`0t~d~2+", [N]),
-      atomic_list_concat([Name3,-,Postfix], Name4)
-  ).
-
-normalize_name_, [Code] -->
-  [Code],
-  {code_type(Code, alnum)}, !,
-  normalize_name_.
-normalize_name_, "-" -->
-  [_], !,
-  normalize_name_.
-normalize_name_--> "".
 
 
 

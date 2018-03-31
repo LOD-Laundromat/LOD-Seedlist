@@ -23,6 +23,7 @@
 :- use_module(library(yall)).
 
 :- use_module(library(atom_ext)).
+:- use_module(library(hash_ext)).
 :- use_module(library(html/html_doc)).
 :- use_module(library(html/html_ext)).
 :- use_module(library(html/html_pagination)).
@@ -214,25 +215,21 @@ seed_method(Request, post, MediaTypes) :-
 % /seed: POST: application/json
 seed_post_media_type(Request, media(application/json,_)) :-
   (   auth_(Request)
-  ->  new_memory_file(File),
-      setup_call_cleanup(
-        open_memory_file(File, write, Out),
-        http_read_data(Request, _, [to(stream(Out))]),
-        close(Out)
-      ),
-      rdf_transaction(assert_seed_(File, E), _, [snapshot(true)]),
-      (var(E) -> Status = 201 ; Status = 400)
-  ;   Status = 403
-  ),
-  reply_json_dict(_{}, [status(Status)]).
-
-assert_seed_(File, E) :-
-  setup_call_cleanup(
-    open_memory_file(File, read, In),
-    rdf_load(In, [format(turtle)]),
-    close(In)
-  ),
-  catch(assert_seeds, E, true).
+  ->  (   http_read_json_dict(Request, Dict, [value_string_as(atom)]),
+          get_dict(url, Dict, Uri)
+      ->  md5(Uri, Hash),
+          with_mutex(
+            seedlist,
+            (   rocks_key(seedlist, Hash)
+            ->  reply_json_dict(_{}, [status(200)])
+            ;   assert_seed(Uri, Hash, Seed),
+                reply_json_dict(Seed, [status(201)])
+            )
+          )
+      ;   reply_json_dict(_{}, [status(400)])
+      )
+  ;   reply_json_dict(_{}, [status(403)])
+  ).
 
 
 
@@ -259,7 +256,7 @@ seed_idle_media_type(Request, media(application/json,_)) :-
             rocks_merge(
               seedlist,
               Hash,
-              _{processing: false, scrape: _{processed: 0.0}}
+              _{processed: 0.0, processing: false}
             )
           ),
           reply_json_dict(_{}, [])
@@ -295,7 +292,7 @@ seed_processing_media_type(Request, media(application/json,_)) :-
             rocks_merge(
               seedlist,
               Hash,
-              _{processing: false, scrape: _{processed: Now}}
+              _{processed: Now, processing: false}
             )
           ),
           reply_json_dict(_{}, [])
@@ -351,148 +348,50 @@ seed_by_status_method(Status, Request, MediaTypes) :-
 
 % HTML %
 
-html_seed_table(Seeds) -->
-  html(ul(\html_maplist(html_seed_row, Seeds))).
-
-html_seed_row(Seed) -->
-  {http_link_to_id(seed, [hash(Seed.hash)], Uri)}, !,
-  html(li(a(href=Uri, [Seed.organization.name,"/",Seed.dataset.name]))).
-html_seed_row(Seed) -->
-  html(li(code(Seed.hash))).
-
 html_seed(Seed) -->
-  html([
-    \header(Seed),
-    \dataset(Seed.dataset),
-    \documents(Seed.documents),
-    \organization(Seed.organization),
-    \processing(Seed.processing),
-    \scrape(Seed.scrape),
-    \source(Seed.source)
-  ]).
+  html(table(tbody(\html_seed_row(Seed)))).
 
-dataset(Dataset) -->
+html_seed_table(Seeds) -->
+  html(
+    table([
+      thead([
+        th("Hash"),
+        th("Interval"),
+        th("Processed"),
+        th("Processing"),
+        th("Staleness"),
+        th("URL")
+      ]),
+      tbody(\html_maplist(html_seed_row, Seeds))
+    ])
+  ).
+
+html_seed_row(Seed) -->
   {
-    ignore(get_dict(description, Dataset, Description)),
-    ignore(get_dict(image, Dataset, Image)),
-    ignore(get_dict(license, Dataset, License)),
-    ignore(get_dict(url, Dataset, Url))
-  },
-  html(
-    section([
-      h2("Dataset"),
-      dd(
-        dl([
-          \description(Description),
-          \image(Image),
-          \last_modified(Dataset.'last-modified'),
-          \license(License),
-          \name(Dataset.name),
-          \url(Url)
-        ])
-      )
-    ])
-  ).
-
-description(Description) -->
-  {var(Description)}, !.
-description(Description) -->
-  html([dt("Description"),dd(Description)]).
-
-documents(Docs) -->
-  html(
-    section([
-      h2("Documents"),
-      dd(ol(\html_maplist(html_seed_document, Docs)))
-    ])
-  ).
-
-header(Seed) -->
-  html(
-    h1([
-      Seed.organization.name,
-      "/",
-      Seed.dataset.name,
-      " (",
-      code(Seed.hash),
-      ")"
-    ])
-  ).
-
-image(Image) -->
-  {var(Image)}, !.
-image(Image) -->
-  html([dt("Image"),dd(a(href=Image,img(src=Image,[])))]).
-
-last_modified(LMod) -->
-  html([dt("Last modified"),dd(\format_time_(LMod))]).
-
-license(License) -->
-  {var(License)}, !.
-license(License) -->
-  html([dt("License"),dd(a(href=License,code(License)))]).
-
-name(Name) -->
-  html([dt("Name"),dd(code(Name))]).
-
-organization(Org) -->
-  {
-    ignore(get_dict(image, Org, Image)),
-    ignore(get_dict(url, Org, Url))
-  },
-  html(
-    section([
-      h2("Organization"),
-      dd(
-        dl([
-          \name(Org.name),
-          \image(Image),
-          \url(Url)
-        ])
-      )
-    ])
-  ).
-
-processing(Processing) -->
-  html([h2("Processing"),p(\html_boolean(Processing))]).
-
-scrape(Scrape) -->
-  {
-    _{added: Added, interval: Interval, processed: Processed} :< Scrape,
+    _{
+      hash: Hash,
+      interval: Interval,
+      processed: Processed,
+      processing: Processing,
+      url: Uri
+    } :< Seed,
+    http_link_to_id(seed, [hash(Hash)], Link),
     Staleness is Interval + Processed
   },
   html(
-    section([
-      h2("Scrape"),
-      dd(
-        dl([
-          dt("Added"),
-          dd(\format_time_(Added)),
-          dt("Interval"),
-          dd(Interval),
-          dt("Processed"),
-          dd(\format_time_(Processed)),
-          dt("Staleness time"),
-          dd(\format_time_(Staleness))
-        ])
-      )
+    tr([
+      td(a(href=Link, code(Seed.hash))),
+      td(\format_time_(Interval)),
+      td(\format_time_(Processed)),
+      td(\html_boolean(Processing)),
+      td(\format_time_(Staleness)),
+      td(a(href=Uri, code(Uri)))
     ])
   ).
-
-source(Source) -->
-  html([h2("Source"),p(code(Source))]).
-
-url(Url) -->
-  {var(Url)}, !.
-url(Url) -->
-  html([dt("URL"),dd(a(href=Url, code(Url)))]).
 
 format_time_(N) -->
   {format_time(string(Str), "%FT%T%:z", N)},
   html(Str).
-
-html_seed_document(Doc) -->
-  html(li(a(href=Doc, Doc))).
 
 
 

@@ -8,7 +8,7 @@ Restart=on-abort
 ExecReload=/bin/kill -s HUP $MAINPID
 StartLimitInterval=60
 LimitNOFILE=10000
-WorkingDirectory=/lhome/wbeek/git/LOD-Seedlist
+WorkingDirectory=/home/wbeek/git/LOD-Seedlist
 ExecStart=/home/wbeek/bin/swipl \
    run.pl \
    --http \

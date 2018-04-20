@@ -426,8 +426,8 @@ user:body(page(_,_), Content_0) -->
 
 % HELPERS %
 
-%! auth_(+Request:list(compound)) is det.
+%! auth_(+Request:list(compound)) is semidet.
 
 auth_(Request) :-
   setting(ll_seedlist:password_file, File),
-  http_authenticate(basic(File), Request, _).
+  catch(http_authenticate(basic(File), Request, _), _, true).

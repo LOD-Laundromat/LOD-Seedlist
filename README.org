@@ -17,6 +17,3 @@ published.  These locations are scraped by the [[https://github.com/LOD-Laundrom
 | ~/seed/HASH~ | ~GET~    |                   | ~application/json~ | View seed     |
 |              |          |                   | ~text/html~        |               |
 |              | ~DELETE~ |                   | ~application/json~ | Delete seed   |
-
-* BUGS
-** Connection refused http://open-data.europa.eu/data

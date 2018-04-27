@@ -42,7 +42,6 @@
     html:menu_item/2,
     html:menu_item/3,
     http:media_types/2,
-    http:param/2,
     http:params/2.
 
 :- http_handler(/,
@@ -88,6 +87,9 @@ http:media_types(seed_processing_handler, [media(application/json),
                                            media(text/html)]).
 http:media_types(seed_stale_handler, [media(application/json),
                                       media(text/html)]).
+
+:- multifile
+    http:param/2.
 
 http:param(hash, [atom,description("Hash key of the requested seed.")]).
 

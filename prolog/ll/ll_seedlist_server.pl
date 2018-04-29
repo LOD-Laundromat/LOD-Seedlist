@@ -64,8 +64,8 @@
     html:handler_description/2,
     html:menu_item/2,
     html:menu_item/3,
-    html:rest_exception/1,
     http:media_types/2,
+    html:page_exception/2,
     user:body//2,
     user:head//2.
 
@@ -393,12 +393,12 @@ format_time_(N) -->
 
 % HTML STYLE %
 
-html:rest_exception(Dict) :-
+html:page_exception(Status, Msg) :-
   html_page(
-    page(_,["HTTP error",Dict.status]),
+    page(_,["HTTP error",Status]),
     [],
     [
-      p(Dict.message),
+      p(Msg),
       p(a(href='/',"Return to root"))
     ]
   ).

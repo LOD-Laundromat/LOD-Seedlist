@@ -6,7 +6,6 @@
 @version 2018
 */
 
-:- use_module(library(aggregate)).
 :- use_module(library(apply)).
 :- use_module(library(http/http_authenticate)).
 :- use_module(library(http/http_client)).
@@ -101,7 +100,7 @@ http:media_types(seed_stale_handler, [media(application/json),
 
 http:param(hash, [atom,description("Hash key of the requested seed.")]).
 
-:- set_setting(http:products, ["LOD-Seedlist"-"v0.0.0"]).
+:- set_setting(http:products, ["LOD-Seedlist"-"v0.0.1"]).
 :- set_setting(pagination:default_page_size, 20).
 
 
@@ -130,7 +129,6 @@ seed_handler(Request) :-
   rest_method(Request, seed_method(Request)).
 
 
-
 % /seed: DELETE
 seed_method(Request, delete, MediaTypes) :-
   rest_media_type(MediaTypes, seed_delete_media_type(Request)).
@@ -151,13 +149,15 @@ seed_delete_media_type(Request, media(application/json,_)) :-
   ).
 
 
-
 % /seed: GET
 seed_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
+  seed_get_(Request, MediaTypes, _).
+
+seed_get_(Request, MediaTypes, Status) :-
   rest_parameters(
     Request,
-    [hash(Hash, [atom,optional(true)]),page(PageNumber),page_size(PageSize)]
+    [hash(Hash,[atom,optional(true)]),page(PageNumber),page_size(PageSize)]
   ),
   (   var(Hash)
   ->  % Return a list of seeds.
@@ -166,14 +166,14 @@ seed_method(Request, Method, MediaTypes) :-
       Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
       pagination(
         Seed,
-        rocks_value(seedlist, Seed),
-        rocks_size(seedlist),
+        seed(Status, Hash, Seed),
+        number_of_seeds(Status),
         Options,
         Page
       ),
-      rest_media_type(MediaTypes, list_seeds_media_type(_, Page))
+      rest_media_type(MediaTypes, list_seeds_media_type(Status, Page))
   ;   % Return the requested seed.
-      seed_by_hash(Hash, Seed)
+      seed(Status, Hash, Seed)
   ->  rest_media_type(MediaTypes, seed_media_type(Seed))
   ;   % The requested seed does not exist.
       throw(error(existence_error(seed_hash,Hash),_))
@@ -205,7 +205,6 @@ seed_media_type(Seed, media(text/html,_)) :-
   html_page(page(_,[Subtitle]), [], [\html_seed(Seed)]).
 
 
-
 % /seed: POST
 seed_method(Request, post, MediaTypes) :-
   rest_media_type(MediaTypes, seed_post_media_type(Request)).
@@ -228,13 +227,15 @@ seed_post_media_type(Request, media(application/json,_)) :-
 seed_idle_handler(Request) :-
   rest_method(Request, seed_idle_method(Request)).
 
+
 % /seed/idle: GET,HEAD
 seed_idle_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
-  seed_by_status_method(idle, Request, MediaTypes).
+  seed_get_(Request, MediaTypes, idle).
 % /seed/idle: PATCH
 seed_idle_method(Request, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_idle_media_type(Request)).
+
 
 % /seed/idle: PATCH: application/json
 %
@@ -262,13 +263,15 @@ seed_idle_media_type(Request, media(application/json,_)) :-
 seed_processing_handler(Request) :-
   rest_method(Request, seed_processing_method(Request)).
 
+
 % /seed/processing: GET,HEAD
 seed_processing_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
-  seed_by_status_method(processing, Request, MediaTypes).
+  seed_get_(Request, MediaTypes, processing).
 % /seed/processing: PATCH
 seed_processing_method(Request, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_processing_media_type(Request)).
+
 
 % /seed/processing: PATCH: application/json
 %
@@ -280,11 +283,7 @@ seed_processing_media_type(Request, media(application/json,_)) :-
       ->  get_time(Now),
           with_mutex(
             seedlist,
-            rocks_merge(
-              seedlist,
-              Hash,
-              _{processed: Now, processing: false}
-            )
+            rocks_merge(seedlist, Hash, _{processed: Now, processing: false})
           ),
           reply_json_dict(_{}, [])
       ;   reply_json_dict(_{}, [status(404)])
@@ -298,40 +297,27 @@ seed_processing_media_type(Request, media(application/json,_)) :-
 seed_stale_handler(Request) :-
   rest_method(Request, seed_stale_method(Request)).
 
+
 % /seed/stale: GET,HEAD
 seed_stale_method(Request, Method, MediaTypes) :-
   http_is_get(Method), !,
-  seed_by_status_method(stale, Request, MediaTypes).
+  seed_get_(Request, MediaTypes, stale).
 % /seed/stale: PATCH
 seed_stale_method(_, patch, MediaTypes) :-
   rest_media_type(MediaTypes, seed_stale_media_type).
+
 
 % /seed/stale: PATCH: application/json
 %
 % Start processing the seed.
 seed_stale_media_type(media(application/json,_)) :-
   (   with_mutex(seedlist, (
-        seed_by_status(stale, Hash, Seed),
+        seed(stale, Hash, Seed),
         rocks_merge(seedlist, Hash, _{processing: true})
       ))
   ->  reply_json_dict(Seed, [])
   ;   reply_json_dict(_{}, [status(404)])
   ).
-
-% /seed/*: GET,HEAD
-seed_by_status_method(Status, Request, MediaTypes) :-
-  rest_parameters(Request, [page(PageNumber),page_size(PageSize)]),
-  memberchk(request_uri(RelUri), Request),
-  http_absolute_uri(RelUri, Uri),
-  Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
-  pagination(
-    Seed,
-    seed_by_status(Status, _, Seed),
-    {Status}/[N]>>aggregate_all(count, seed_by_status(Status, _, _), N),
-    Options,
-    Page
-  ),
-  rest_media_type(MediaTypes, list_seeds_media_type(Status, Page)).
 
 
 

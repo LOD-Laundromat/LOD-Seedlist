@@ -1,10 +1,10 @@
 :- module(
   ll_seedlist,
   [
-    assert_seeds/1,  % +Dict
-    retract_seed/1,  % +Hash
-    seed_by_hash/2,  % +Hash, -Seed
-    seed_by_status/3 % +Status, -Hash, -Seed
+    assert_seeds/1,    % +Dict
+    number_of_seeds/2, % ?Status, -N
+    retract_seed/1,    % +Hash
+    seed/3             % ?Status, ?Hash, -Seed
   ]
 ).
 
@@ -14,22 +14,16 @@
 @version 2018
 */
 
+:- use_module(library(aggregate)).
 :- use_module(library(apply)).
 :- use_module(library(error)).
-:- use_module(library(lists)).
-:- use_module(library(pairs)).
 :- use_module(library(settings)).
 
+:- use_module(library(call_ext)).
 :- use_module(library(conf_ext)).
-:- use_module(library(dcg)).
 :- use_module(library(dict)).
 :- use_module(library(hash_ext)).
-:- use_module(library(http/http_client2)).
 :- use_module(library(rocks_ext)).
-:- use_module(library(sw/rdf_mem)).
-:- use_module(library(sw/rdf_prefix)).
-:- use_module(library(sw/rdf_term)).
-:- use_module(library(uri_ext)).
 
 :- at_halt(maplist(rocks_close, [seedlist])).
 
@@ -40,12 +34,6 @@ merge_dicts(partial, _, New, In, Out) :-
   merge_dicts(New, In, Out).
 merge_dicts(full, _, Initial, Additions, Out) :-
   merge_dicts([Initial|Additions], Out).
-
-:- maplist(rdf_assert_prefix, [
-     dcat-'http://www.w3.org/ns/dcat#',
-     dct-'http://purl.org/dc/terms/',
-     rdfs-'http://www.w3.org/2000/01/rdf-schema#'
-   ]).
 
 :- setting(default_interval, float, 86400.0,
            "The default interval for recrawling.").
@@ -79,6 +67,17 @@ assert_seeds(Dict) :-
 
 
 
+%! number_of_seeds(?Status:oneof([idle,processing,stale]), -Seed:dict) is det.
+
+number_of_seeds(Status, N) :-
+  var(Status), !,
+  rocks_size(seedlist, N).
+number_of_seeds(Status, N) :-
+  must_be(oneof([idle,processing,stale]), Status),
+  aggregate_all(count, seed(Status, _, _), N).
+
+
+
 %! retract_seed(+Hash:atom) is det.
 
 retract_seed(Hash) :-
@@ -86,40 +85,22 @@ retract_seed(Hash) :-
 
 
 
-%! seed_by_hash(+Hash:atom, -Seed:dict) is semidet.
-%! seed_by_hash(-Hash:atom, -Seed:dict) is nondet.
+%! seed(?Status:oneof([idle,processing,stale]), +Hash:atom, -Seed:dict) is semidet.
+%! seed(?Status:oneof([idle,processing,stale]), -Hash:atom, -Seed:dict) is nondet.
 
-seed_by_hash(Hash, Seed) :-
-  rocks(seedlist, Hash, Seed).
+seed(Status, Hash, Seed) :-
+  call_det_when_ground(Hash, (
+    rocks(seedlist, Hash, Seed),
+    (ground(Status) -> check_status_(Status, Seed) ; true)
+  )).
 
-
-
-%! seed_by_status(+Status:oneof([idle,processing,stale]), ?Hash:atom,
-%!                -Seed:dict) is nondet.
-
-seed_by_status(Status, Hash, Seed) :-
-  rocks(seedlist, Hash, Seed),
-  (   Status = processing
-  ->  _{processing: true} :< Seed
-  ;   get_time(Now),
-      _{processing: false, interval: Interval, processed: Processed} :< Seed,
-      N is Processed + Interval,
-      (Status == idle -> N >= Now ; Status == stale -> N < Now)
-  ).
-
-
-
-
-
-% HELPERS %
-
-%! uri_host(+Uri:atom, -Host:atom) is det.
-
-uri_host(Uri, Host) :-
-  uri_components(Uri, UriComps),
-  uri_data(authority, UriComps, Auth),
-  uri_authority_components(Auth, AuthComps),
-  uri_authority_data(host, AuthComps, Host).
+check_status_(processing, Seed) :- !,
+  _{processing: true} :< Seed.
+check_status_(Status, Seed) :-
+  get_time(Now),
+  _{processing: false, interval: Interval, processed: Processed} :< Seed,
+  N is Processed + Interval,
+  (Status == idle -> N >= Now ; Status == stale -> N < Now).
 
 
 

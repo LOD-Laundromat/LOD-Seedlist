@@ -64,8 +64,9 @@
     html:handler_description/2,
     html:menu_item/2,
     html:menu_item/3,
-    http:media_types/2,
     html:page_exception/2,
+    http:error_status_message_hook/3,
+    http:media_types/2,
     user:body//2,
     user:head//2.
 
@@ -77,6 +78,13 @@ html:handler_description(seed_stale_handler, "Stale seed").
 html:menu_item(seed_idle_handler, "Idle").
 html:menu_item(seed_processing_handler, "Processing").
 html:menu_item(seed_stale_handler, "Stale").
+
+http:error_status_message_hook(error(existence_error(seed_hash,Hash),_Context), 404, Msg) :-
+  format(
+    string(Msg),
+    "😿 Your request is incorrect!  Seed with hash ‘~a’ does not exist.",
+    [Hash]
+  ).
 
 http:media_types(home_handler, [media(text/html)]).
 http:media_types(seed_handler, [media(application/json),
@@ -94,7 +102,7 @@ http:media_types(seed_stale_handler, [media(application/json),
 http:param(hash, [atom,description("Hash key of the requested seed.")]).
 
 :- set_setting(http:products, ["LOD-Seedlist"-"v0.0.0"]).
-:- set_setting(pagination:default_page_size, 100).
+:- set_setting(pagination:default_page_size, 20).
 
 
 
@@ -152,7 +160,8 @@ seed_method(Request, Method, MediaTypes) :-
     [hash(Hash, [atom,optional(true)]),page(PageNumber),page_size(PageSize)]
   ),
   (   var(Hash)
-  ->  memberchk(request_uri(RelUri), Request),
+  ->  % Return a list of seeds.
+      memberchk(request_uri(RelUri), Request),
       http_absolute_uri(RelUri, Uri),
       Options = _{page_number: PageNumber, page_size: PageSize, uri: Uri},
       pagination(
@@ -163,10 +172,11 @@ seed_method(Request, Method, MediaTypes) :-
         Page
       ),
       rest_media_type(MediaTypes, list_seeds_media_type(_, Page))
-  ;   seed_by_hash(Hash, Seed)
+  ;   % Return the requested seed.
+      seed_by_hash(Hash, Seed)
   ->  rest_media_type(MediaTypes, seed_media_type(Seed))
-  ;   format(string(Msg), "Hash ‘~a’ does not exist.", [Hash]),
-      rest_media_type(MediaTypes, existence_error_media_type(Hash, Msg))
+  ;   % The requested seed does not exist.
+      throw(error(existence_error(seed_hash,Hash),_))
   ).
 
 %! list_seeds_media_type(?Status:oneof([idle,processing,stale]), +Page:dict,
@@ -193,19 +203,6 @@ seed_media_type(Seed, media(text/html,_)) :-
   _{hash: Hash} :< Seed,
   atom_string(Hash, Subtitle),
   html_page(page(_,[Subtitle]), [], [\html_seed(Seed)]).
-
-%! existence_error_media_type(+Hash:atom, +MediaType:compound) is det.
-%
-% /seed/$(HASH): application/json, text/html
-
-existence_error_media_type(Hash, Msg, media(application/json,_)) :-
-  reply_json_dict(_{hash: Hash, message: Msg}, [status(404)]).
-existence_error_media_type(Hash, Msg, media(test/html,_)) :-
-  html_page(
-    page(_,["Seed",Hash]),
-    [],
-    [h1("Existence error"),p(Msg)]
-  ).
 
 
 

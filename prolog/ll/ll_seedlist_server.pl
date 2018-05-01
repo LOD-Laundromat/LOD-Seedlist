@@ -326,21 +326,19 @@ seed_stale_media_type(media(application/json,_)) :-
 % HTML %
 
 html_seed(Seed) -->
-  html(table(tbody(\html_seed_row(Seed)))).
+  html_table(\html_seed_row(Seed)).
 
 html_seed_table(Seeds) -->
-  html(
-    table([
-      thead([
-        th("Hash"),
-        th("Interval"),
-        th("Processed"),
-        th("Processing"),
-        th("Staleness"),
-        th("URL")
-      ]),
-      tbody(\html_maplist(html_seed_row, Seeds))
-    ])
+  html_table(
+    \html_table_header([
+      "Hash",
+      "Interval",
+      "Processed",
+      "Processing",
+      "Staleness",
+      "URL"
+    ]),
+    \html_maplist(html_seed_row, Seeds)
   ).
 
 html_seed_row(Seed) -->

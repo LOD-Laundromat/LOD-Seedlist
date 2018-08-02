@@ -13,11 +13,6 @@
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_path)).
 :- use_module(library(memfile)).
-:- use_module(library(semweb/rdf_db), [
-     rdf_load/2,
-     rdf_transaction/3
-   ]).
-:- use_module(library(semweb/turtle), []).
 :- use_module(library(settings)).
 :- use_module(library(yall)).
 

@@ -325,7 +325,7 @@ html_seed(Seed) -->
 
 html_seed_table(Seeds) -->
   html_table(
-    \html_table_header([
+    \html_table_header_row([
       "Hash",
       "Interval",
       "Processed",

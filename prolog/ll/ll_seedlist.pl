@@ -10,12 +10,17 @@
 
 /** <module> LOD Laundromat seedlist
 
+Debug flag `ll(seedlist)'.
+
+---
+
 @author Wouter Beek
 @version 2018
 */
 
 :- use_module(library(aggregate)).
 :- use_module(library(apply)).
+:- use_module(library(debug)).
 :- use_module(library(error)).
 :- use_module(library(settings)).
 
@@ -56,6 +61,7 @@ assert_seed(Uri) :-
     processing: false,
     url: Uri
   },
+  debug(ll(seedlist), "ASSERT ~a", [Uri]),
   rocks_put(seedlist, Hash, Seed).
 
 
@@ -71,9 +77,11 @@ assert_seeds(Dict) :-
 
 number_of_seeds(Status, N) :-
   var(Status), !,
+  debug(ll(seedlist), "COUNT", []),
   rocks_size(seedlist, N).
 number_of_seeds(Status, N) :-
   must_be(oneof([idle,processing,stale]), Status),
+  debug(ll(seedlist), "COUNT ~a", [Status]),
   aggregate_all(count, seed(Status, _, _), N).
 
 
@@ -81,6 +89,7 @@ number_of_seeds(Status, N) :-
 %! retract_seed(+Hash:atom) is det.
 
 retract_seed(Hash) :-
+  debug(ll(seedlist), "RETRACT ~a", [Hash]),
   rocks_delete(seedlist, Hash).
 
 
@@ -91,6 +100,7 @@ retract_seed(Hash) :-
 seed(Status, Hash, Seed) :-
   call_det_when_ground(Hash, (
     rocks(seedlist, Hash, Seed),
+    debug(ll(seedlist), "LOOKUP ~a", [Hash]),
     (ground(Status) -> check_status_(Status, Seed) ; true)
   )).
 

@@ -2,22 +2,22 @@
 
 /** <module> LOD Laundromat Seedlist Server
 
+Debug flag `ll(seedlist_server)'.
+
+---
+
 @author Wouter Beek
 @version 2018
 */
 
-:- use_module(library(apply)).
+:- use_module(library(debug)).
 :- use_module(library(http/http_authenticate)).
-:- use_module(library(http/http_client)).
 :- use_module(library(http/http_dispatch)).
 :- use_module(library(http/http_json)).
 :- use_module(library(http/http_path)).
-:- use_module(library(memfile)).
 :- use_module(library(settings)).
-:- use_module(library(yall)).
 
 :- use_module(library(atom_ext)).
-:- use_module(library(html/html_doc)).
 :- use_module(library(html/html_ext)).
 :- use_module(library(html/html_pagination)).
 :- use_module(library(http/http_pagination)).
@@ -25,7 +25,6 @@
 :- use_module(library(http/http_server)).
 :- use_module(library(ll/ll_seedlist)).
 :- use_module(library(pagination)).
-:- use_module(library(pp)).
 :- use_module(library(rocks_ext)).
 
 :- discontiguous
@@ -150,6 +149,7 @@ seed_method(Request, Method, MediaTypes) :-
   seed_get_(Request, MediaTypes, _).
 
 seed_get_(Request, MediaTypes, Status) :-
+  debug(ll(seedlist_server), "GET /seed", []),
   rest_parameters(
     Request,
     [hash(Hash,[atom,optional(true)]),page(PageNumber),page_size(PageSize)]
@@ -306,6 +306,7 @@ seed_stale_method(_, patch, MediaTypes) :-
 %
 % Start processing the seed.
 seed_stale_media_type(media(application/json,_)) :-
+  debug(ll(seedlist_server), "PATCH /seed/stale", []),
   (   with_mutex(seedlist, (
         seed(stale, Hash, Seed),
         rocks_merge(seedlist, Hash, _{processing: true})
